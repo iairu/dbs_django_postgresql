@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
 from pathlib import Path
-from os import environ
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,10 +21,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = environ.get('SECRET_KEY')
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False if environ.get('DEBUG') != "1" else True
+DEBUG = False if os.environ.get('DEBUG') != "1" else True
 
 ALLOWED_HOSTS = [
     # https://docs.djangoproject.com/en/4.0/ref/settings/#allowed-hosts
@@ -81,10 +81,10 @@ DATABASES = {
     'default': {},
     'readonly': {
         'ENGINE': 'django.db.backends.postgresql',
-        'HOST': environ.get('DBHOST'),
-        'NAME': environ.get('DBNAME'),
-        'USER': environ.get('DBUSER'),
-        'PASSWORD': environ.get('DBPASS'),
+        'HOST': os.environ.get('DBHOST'),
+        'NAME': os.environ.get('DBNAME'),
+        'USER': os.environ.get('DBUSER'),
+        'PASSWORD': os.environ.get('DBPASS'),
     }
 }
 
@@ -124,6 +124,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / "static"]
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+STATIC_ROOT = os.path.join(PROJECT_ROOT, 'static')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
