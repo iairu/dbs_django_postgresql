@@ -38,3 +38,13 @@ set SECRET_KEY=nieco nahodne som prebehol cez SHA-1
 6. hotovo, ak je správne nakonfigurovaný prístup k DB tak by mal fungovať Django webserver pomocou `python manage.py runserver`
 
 > v budúcnosti už treba aplikovať len 2. a 3. krok po otvorení terminálu a pred prácou s manage.py
+
+## DigitalOcean deployment
+
+Zdroj: https://docs.digitalocean.com/tutorials/app-deploy-django-app/#step-4-deploying-to-digitalocean-with-app-platform
+
+- Beží to na GitHub Student Benefits $100 promo kóde
+- Využíva **gunicorn** (nedostupné na Windowse, ale momentálne nevidím pre seba využitie, Windows alternatíva je vraj waitress https://stackoverflow.com/a/66485423)
+- Použitý spomenutý run command `gunicorn --worker-tmp-dir /dev/shm mysite.wsgi` kde `mysite.wsgi` je meno modulu `wsgi.py` nie meno súboru (ma trochu domotalo)
+- DBPASS a SECRET_KEY env.variables majú zaškrtnuté Encrypt
+- Zvolená najlacnejšia varianta ($5/mesiac)
