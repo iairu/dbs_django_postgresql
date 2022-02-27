@@ -28,7 +28,7 @@ DEBUG = False if environ.get('DEBUG') != "1" else True
 
 ALLOWED_HOSTS = [
     # https://docs.djangoproject.com/en/4.0/ref/settings/#allowed-hosts
-    ".fiit-dbs-iairu-app.azurewebsites.net", # povoli aj s www. a dalsimi subdomenami
+    ".fiit-dbs-iairu-app.azurewebsites.net" if not DEBUG else "127.0.0.1", # povoli aj s www. a dalsimi subdomenami
 ]
 
 

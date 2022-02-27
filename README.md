@@ -22,7 +22,8 @@ set DBHOST=zo zadania pre env_prod alebo lokalna pre env_dev
 set DBNAME=dota2
 set DBUSER=ais login
 set DBPASS=ais heslo
-set DEBUG=0 ak to je env_prod a 1 ak env_dev
+:: debug je lokalne vzdy 1, na digitalocean je 0
+set DEBUG=1
 set SECRET_KEY=nieco nahodne som prebehol cez SHA-1
 ```
 
