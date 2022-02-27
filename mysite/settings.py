@@ -26,9 +26,10 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False if os.environ.get('DEBUG') != "1" else True
 
-ALLOWED_HOSTS = [
-    # https://docs.djangoproject.com/en/4.0/ref/settings/#allowed-hosts
-    ".fiit-dbs-iairu-app.azurewebsites.net" if not DEBUG else "127.0.0.1", # povoli aj s www. a dalsimi subdomenami
+# https://docs.djangoproject.com/en/4.0/ref/settings/#allowed-hosts
+ALLOWED_HOSTS = ["127.0.0.1"] if DEBUG else [
+    "fiit-dbs-iairu-app-i6jox.ondigitalocean.app",
+    "fiit-dbs.iairu.com"
 ]
 
 
