@@ -1,3 +1,5 @@
 *.code-workspace
 __pycache__
 venv
+env_dev.bat
+env_prod.bat
