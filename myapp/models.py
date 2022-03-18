@@ -1,4 +1,5 @@
 from django.db import models, connections
+from itertools import groupby
 
 
 def _dict_fetch_one(cursor): 
@@ -8,6 +9,11 @@ def _dict_fetch_one(cursor):
     # return dict(zip(columns, (cursor.fetchone(), cursor.fetchone()))) # dva zaznamy
     return dict(zip(columns, (cursor.fetchone()))) # jeden zaznam
 
+def _dict_fetch_all(cursor): 
+    # z Django docs https://docs.djangoproject.com/en/4.0/topics/db/sql/#executing-custom-sql-directly
+    columns = [col[0] for col in cursor.description]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()] # povodne: vsetky zaznamy
+
 # Create your models here.
 def sql_query_one(cursor_query: str): 
     # z Django docs https://docs.djangoproject.com/en/4.0/topics/db/sql/#executing-custom-sql-directly
@@ -15,4 +21,12 @@ def sql_query_one(cursor_query: str):
     with connections['readonly'].cursor() as cursor:
         cursor.execute(cursor_query)
         out = _dict_fetch_one(cursor)
+    return out
+
+def sql_query_all(cursor_query: str): 
+    # z Django docs https://docs.djangoproject.com/en/4.0/topics/db/sql/#executing-custom-sql-directly
+    # treba opatrne s SQL, pretoze sa nad nim robia nejake upravy (napr. neukoncuje sa s ;), vid dokumentaciu
+    with connections['readonly'].cursor() as cursor:
+        cursor.execute(cursor_query)
+        out = _dict_fetch_all(cursor)
     return out
