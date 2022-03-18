@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse
 
 from .models import sql_query_all, sql_query_one, aggregate # priama SQL podpora
-import json
+import simplejson as json
 
 # Create your views here.
 def index(request):
@@ -75,7 +75,7 @@ def v2_patches(request):
                 FROM patches
                 ORDER BY patch_version ASC
             )
-            SELECT my_patches.*, matches.id as match_id, matches.duration as duration
+            SELECT my_patches.*, matches.id as match_id, round(matches.duration::decimal / 100, 2) as duration
             FROM my_patches LEFT OUTER JOIN matches ON (matches.start_time >= my_patches.patch_start_date AND matches.start_time <= my_patches.patch_end_date);
             """), key="patch_version", new_group="matches", will_group=["match_id", "duration"]) }), content_type="application/json; charset=utf-8", status=200)
 
