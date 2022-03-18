@@ -65,7 +65,7 @@ def v2_patches(request):
 
     
     return HttpResponse(
-        json.dumps({"patches": sql_query_all("""
+        json.dumps({"patches": aggregate(sql_query_all("""
             WITH my_patches AS
             (
                 SELECT 
@@ -77,7 +77,7 @@ def v2_patches(request):
             )
             SELECT my_patches.*, matches.id as match_id, matches.duration as duration
             FROM my_patches LEFT OUTER JOIN matches ON (matches.start_time >= my_patches.patch_start_date AND matches.start_time <= my_patches.patch_end_date);
-            """) }), content_type="application/json; charset=utf-8", status=200)
+            """), key="patch_version", new_group="matches", will_group=["match_id", "duration"]) }), content_type="application/json; charset=utf-8", status=200)
 
 def v2_players_game_exp(request, player_id):
     # {
