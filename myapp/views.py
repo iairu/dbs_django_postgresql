@@ -79,11 +79,34 @@ def v2_players_game_exp(request, player_id):
     #     }
     #   ]
     # }
+    try: # nejake zabezpecenie aspon, nemozeme predsa poslat cokolvek z URL na SQL server
+        secure_player_id = int(player_id)
         return HttpResponse(
             json.dumps({
-            # **sql_query_one("SELECT VERSION()")
-            "id": player_id # todo: kontrola existencie => status code
+                "id": secure_player_id,
+                **sql_query_one("SELECT nick as player_nick FROM players WHERE id = " + str(secure_player_id) + ";"),
+                "matches": sql_query_all("""
+                    SELECT match_id, localized_name as hero_localized_name, round(duration::decimal / 60, 2) as match_duration_minutes, 
+                    (COALESCE(matches_players_details.xp_hero,0) + 
+                    COALESCE(matches_players_details.xp_creep,0) + 
+                    COALESCE(matches_players_details.xp_other,0) + 
+                    COALESCE(matches_players_details.xp_roshan,0)) as experiences_gained, 
+                    level as level_gained,
+                    CASE WHEN radiant_win AND player_slot >= 0 AND player_slot <= 4  THEN true
+                        WHEN not radiant_win AND player_slot >= 128 AND player_slot <= 132 THEN true
+                        ELSE false
+                    END as winner
+                    FROM matches_players_details 
+                    INNER JOIN heroes ON (matches_players_details.hero_id = heroes.id) 
+                    INNER JOIN matches ON (matches_players_details.match_id = matches.id)
+                    WHERE player_id = """ + str(secure_player_id) + """;
+                """)
                 }), content_type="application/json; charset=utf-8", status=200)
+    except BaseException as err:
+        return HttpResponse(
+            json.dumps({
+                "error": str(err)
+                }), content_type="application/json; charset=utf-8", status=400) # bad request
 
 def v2_players_game_objectives(request, player_id):
     # {
