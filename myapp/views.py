@@ -49,21 +49,6 @@ def v2_patches(request):
     #   ]
     # }
 
-    # alternativny sposob, kde je agregacia riesena v SQL cez json_agg, avsak query trva o 150ms dlhsie ako bez agregacie
-    # WITH my_patches AS
-    # (
-    #     SELECT 
-    #     name as patch_version, 
-    #     EXTRACT(EPOCH FROM release_date)::integer as patch_start_date, 
-    #     LEAD(EXTRACT(EPOCH FROM release_date)::integer, 1) OVER (ORDER BY name) as patch_end_date
-    #     FROM patches
-    # )
-    # SELECT my_patches.*, json_agg(json_build_object('match_id', matches.id, 'duration', matches.duration)) as matches
-    # FROM my_patches LEFT OUTER JOIN matches ON (matches.start_time >= my_patches.patch_start_date AND matches.start_time <= my_patches.patch_end_date)
-    # GROUP BY patch_version, patch_start_date, patch_end_date
-    # ORDER BY patch_version ASC;
-
-    
     return HttpResponse(
         json.dumps({"patches": aggregate(sql_query_all("""
             WITH my_patches AS
@@ -94,11 +79,11 @@ def v2_players_game_exp(request, player_id):
     #     }
     #   ]
     # }
-    return HttpResponse(
-        json.dumps({
+        return HttpResponse(
+            json.dumps({
             # **sql_query_one("SELECT VERSION()")
             "id": player_id # todo: kontrola existencie => status code
-            }), content_type="application/json; charset=utf-8", status=200)
+                }), content_type="application/json; charset=utf-8", status=200)
 
 def v2_players_game_objectives(request, player_id):
     # {
