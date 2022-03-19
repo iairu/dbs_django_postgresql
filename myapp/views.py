@@ -48,7 +48,6 @@ def v2_patches(request):
     #     }
     #   ]
     # }
-
     return HttpResponse(
         json.dumps({"patches": aggregate(sql_query_all("""
             WITH my_patches AS
@@ -81,27 +80,28 @@ def v2_players_game_exp(request, player_id):
     # }
     try: # nejake zabezpecenie aspon, nemozeme predsa poslat cokolvek z URL na SQL server
         secure_player_id = int(player_id)
+        data = aggregate(sql_query_all("""
+            SELECT player_id as id, COALESCE(nick,'unknown') as player_nick, match_id, 
+            localized_name as hero_localized_name, round(duration::decimal / 60, 2) as match_duration_minutes, 
+            (COALESCE(matches_players_details.xp_hero,0) + 
+            COALESCE(matches_players_details.xp_creep,0) + 
+            COALESCE(matches_players_details.xp_other,0) + 
+            COALESCE(matches_players_details.xp_roshan,0)) as experiences_gained, 
+            level as level_gained,
+            CASE WHEN radiant_win AND player_slot >= 0 AND player_slot <= 4  THEN true
+                WHEN not radiant_win AND player_slot >= 128 AND player_slot <= 132 THEN true
+                ELSE false
+            END as winner
+            FROM matches_players_details 
+            INNER JOIN heroes ON (matches_players_details.hero_id = heroes.id) 
+            INNER JOIN matches ON (matches_players_details.match_id = matches.id) 
+            INNER JOIN players ON (player_id = players.id)
+            WHERE player_id = """ + str(secure_player_id) + """ ORDER BY match_id ASC;
+        """), key="id", new_group="matches", will_group=["match_id", "hero_localized_name", "match_duration_minutes",
+        "experiences_gained", "level_gained", "winner"])
         return HttpResponse(
-            json.dumps({
-                "id": secure_player_id,
-                **sql_query_one("SELECT nick as player_nick FROM players WHERE id = " + str(secure_player_id) + ";"),
-                "matches": sql_query_all("""
-                    SELECT match_id, localized_name as hero_localized_name, round(duration::decimal / 60, 2) as match_duration_minutes, 
-                    (COALESCE(matches_players_details.xp_hero,0) + 
-                    COALESCE(matches_players_details.xp_creep,0) + 
-                    COALESCE(matches_players_details.xp_other,0) + 
-                    COALESCE(matches_players_details.xp_roshan,0)) as experiences_gained, 
-                    level as level_gained,
-                    CASE WHEN radiant_win AND player_slot >= 0 AND player_slot <= 4  THEN true
-                        WHEN not radiant_win AND player_slot >= 128 AND player_slot <= 132 THEN true
-                        ELSE false
-                    END as winner
-                    FROM matches_players_details 
-                    INNER JOIN heroes ON (matches_players_details.hero_id = heroes.id) 
-                    INNER JOIN matches ON (matches_players_details.match_id = matches.id)
-                    WHERE player_id = """ + str(secure_player_id) + """;
-                """)
-                }), content_type="application/json; charset=utf-8", status=200)
+            # chyba ak ziadne data napr. nenajdene player_id
+            json.dumps(data[0] if len(data) else {"error": "no data"}), content_type="application/json; charset=utf-8", status=200)
     except BaseException as err:
         return HttpResponse(
             json.dumps({
@@ -125,11 +125,30 @@ def v2_players_game_objectives(request, player_id):
     #     }
     #   ]
     # }
-    return HttpResponse(
-        json.dumps({
-            # **sql_query_one("SELECT VERSION()")
-            "id": player_id
-            }), content_type="application/json; charset=utf-8", status=200)
+    try: # nejake zabezpecenie aspon, nemozeme predsa poslat cokolvek z URL na SQL server
+        secure_player_id = int(player_id)
+        data = aggregate(sql_query_all("""
+        SELECT player_id as id, COALESCE(nick,'unknown') as player_nick, match_id, 
+        localized_name as hero_localized_name, COALESCE(subtype, 'NO_ACTION') as hero_action,
+        COUNT(subtype) as count
+        FROM matches_players_details 
+        INNER JOIN heroes ON (matches_players_details.hero_id = heroes.id) 
+        INNER JOIN matches ON (matches_players_details.match_id = matches.id) 
+        INNER JOIN players ON (player_id = players.id) 
+        FULL OUTER JOIN game_objectives ON (matches_players_details.id = match_player_detail_id_1)
+        WHERE player_id = """ + str(secure_player_id) + """ GROUP BY player_id, player_nick, match_id, hero_localized_name, hero_action;
+        """), key="id", new_group="matches", will_group=["match_id", "hero_localized_name", "hero_action", "count"])
+        data = data[0] if len(data) else {"error": "no data"}
+        # todo: vykonat \/ len ak nebol v riadku nad tymto error a existuje data["matches"] inac ignore
+        data["matches"] = aggregate(data["matches"], key="match_id", new_group="actions", will_group=["hero_action", "count"])
+        return HttpResponse(
+            # chyba ak ziadne data napr. nenajdene player_id
+            json.dumps(data), content_type="application/json; charset=utf-8", status=200)
+    except BaseException as err:
+        return HttpResponse(
+            json.dumps({
+                "error": str(err)
+                }), content_type="application/json; charset=utf-8", status=400) # bad request
 
 def v2_players_abilities(request, player_id):
     # {
@@ -149,8 +168,22 @@ def v2_players_abilities(request, player_id):
     #     }
     #   ]
     # }
-    return HttpResponse(
-        json.dumps({
-            # **sql_query_one("SELECT VERSION()")
-            "id": player_id
-            }), content_type="application/json; charset=utf-8", status=200)
+    try: # nejake zabezpecenie aspon, nemozeme predsa poslat cokolvek z URL na SQL server
+        secure_player_id = int(player_id)
+        return HttpResponse(
+            json.dumps({
+                "id": secure_player_id,
+                **sql_query_one("SELECT COALESCE(nick,'unknown') as player_nick FROM players WHERE id = " + str(secure_player_id) + ";"),
+                "matches": sql_query_all("""
+                    SELECT match_id, localized_name as hero_localized_name, 'todo' as abilities
+                    FROM matches_players_details 
+                    INNER JOIN heroes ON (matches_players_details.hero_id = heroes.id) 
+                    INNER JOIN matches ON (matches_players_details.match_id = matches.id)
+                    WHERE player_id = """ + str(secure_player_id) + """;
+                """)
+                }), content_type="application/json; charset=utf-8", status=200)
+    except BaseException as err:
+        return HttpResponse(
+            json.dumps({
+                "error": str(err)
+                }), content_type="application/json; charset=utf-8", status=400) # bad request
