@@ -11,6 +11,7 @@ def index(request):
         <h2>Content</h2>
         <nav>
             <a href=\"/v1/health/\">/v1/health/</a><br>
+            <br>
             <a href=\"/v2/patches/\">/v2/patches/</a><br>
             <a href=\"/v2/players/14944/game_exp/\">/v2/players/14944/game_exp/</a><br>
             <a href=\"/v2/players/14944/game_objectives/\">/v2/players/14944/game_objectives/</a><br>
@@ -56,20 +57,22 @@ def v2_patches(request):
         # SQL + agregacie do noveho zoskupenia "matches"
         data = aggregate(sql_query_all("""
 
-        WITH my_patches AS
-        (
-            SELECT name 																as patch_version, 
-                 EXTRACT(EPOCH FROM release_date)::integer 								as patch_start_date, 
-            LEAD(EXTRACT(EPOCH FROM release_date)::integer, 1) OVER (ORDER BY name)  	as patch_end_date
-            FROM patches
-            ORDER BY patch_version ASC
-        )
-        SELECT my_patches.*, 
-        matches.id 																		as match_id, 
-        ROUND(matches.duration::decimal / 60, 2) 										as duration
-        FROM my_patches 
-        LEFT OUTER JOIN matches ON (matches.start_time >= my_patches.patch_start_date AND 
-                                    matches.start_time <= COALESCE(my_patches.patch_end_date, EXTRACT(EPOCH FROM NOW())::integer));
+            WITH my_patches AS
+            (
+                SELECT name                                     as patch_version, 
+                    EXTRACT(EPOCH FROM release_date)::integer  as patch_start_date, 
+                LEAD(EXTRACT(EPOCH FROM release_date)::integer, 1) OVER (ORDER BY name)      
+                                                                as patch_end_date
+                FROM patches
+                ORDER BY patch_version ASC
+            )
+            SELECT my_patches.*, 
+            matches.id                                          as match_id, 
+            ROUND(matches.duration::decimal / 60, 2)            as duration
+            FROM my_patches 
+            LEFT OUTER JOIN matches ON (matches.start_time >= my_patches.patch_start_date AND 
+                                        matches.start_time <= COALESCE(my_patches.patch_end_date,
+                                        EXTRACT(EPOCH FROM NOW())::integer));
 
         """), key="patch_version", new_group="matches", will_group=["match_id", "duration"])
         return HttpResponse(json.dumps({"patches": data }), content_type="application/json; charset=utf-8", status=200)
@@ -98,20 +101,20 @@ def v2_players_game_exp(request, player_id):
         # SQL + agregacie do noveho zoskupenia "matches"
         data = aggregate(sql_query_all("""
 
-            SELECT players.id 							as id, 
-            COALESCE(players.nick, 'unknown') 			as player_nick, 
-            matches.id 									as match_id,
-            heroes.localized_name 						as hero_localized_name, 
-            ROUND(matches.duration::decimal / 60, 2)	as match_duration_minutes, 
+            SELECT players.id                             as id, 
+            COALESCE(players.nick, 'unknown')             as player_nick, 
+            matches.id                                    as match_id,
+            heroes.localized_name                         as hero_localized_name, 
+            ROUND(matches.duration::decimal / 60, 2)      as match_duration_minutes, 
             (COALESCE(mpd.xp_hero,0) + 
-             COALESCE(mpd.xp_creep,0) + 
-             COALESCE(mpd.xp_other,0) + 
-             COALESCE(mpd.xp_roshan,0)) 				as experiences_gained, 
-            mpd.level									as level_gained,
+            COALESCE(mpd.xp_creep,0) + 
+            COALESCE(mpd.xp_other,0) + 
+            COALESCE(mpd.xp_roshan,0))                   as experiences_gained, 
+            mpd.level                                     as level_gained,
             CASE WHEN     matches.radiant_win AND mpd.player_slot >= 0   AND mpd.player_slot <= 4   THEN true
-                 WHEN not matches.radiant_win AND mpd.player_slot >= 128 AND mpd.player_slot <= 132 THEN true
-                 ELSE false
-            END 										as winner
+                WHEN not matches.radiant_win AND mpd.player_slot >= 128 AND mpd.player_slot <= 132 THEN true
+                ELSE false
+            END                                           as winner
             FROM matches_players_details as mpd
             INNER JOIN heroes ON (mpd.hero_id = heroes.id) 
             INNER JOIN matches ON (mpd.match_id = matches.id) 
@@ -155,10 +158,10 @@ def v2_players_game_objectives(request, player_id):
         # SQL + agregacie do noveho zoskupenia "matches" (vratane obsahu buducich sub-agregacii)
         data = aggregate(sql_query_all("""
 
-            SELECT players.id               	       as id, 
+            SELECT players.id                          as id, 
             COALESCE(players.nick,'unknown')           as player_nick, 
-            matches.id 							       as match_id, 
-            heroes.localized_name           	       as hero_localized_name, 
+            matches.id                                 as match_id, 
+            heroes.localized_name                      as hero_localized_name, 
             COALESCE(gobj.subtype, 'NO_ACTION')        as hero_action,
             COUNT(COALESCE(gobj.subtype, 'NO_ACTION')) as count
             FROM matches_players_details as mpd 
@@ -207,13 +210,13 @@ def v2_players_abilities(request, player_id):
         # SQL + agregacie do noveho zoskupenia "matches" (vratane obsahu buducich sub-agregacii)
         data = aggregate(sql_query_all("""
 
-            SELECT players.id 					as id, 
-            COALESCE(players.nick,'unknown') 	as player_nick, 
-            matches.id 							as match_id, 
-            heroes.localized_name 				as hero_localized_name, 
-            ab.name 							as ability_name, 
-            COUNT(ab.name) 						as count,
-            MAX(au.level) 						as upgrade_level 
+            SELECT players.id                      as id, 
+            COALESCE(players.nick,'unknown')       as player_nick, 
+            matches.id                             as match_id, 
+            heroes.localized_name                  as hero_localized_name, 
+            ab.name                                as ability_name, 
+            COUNT(ab.name)                         as count,
+            MAX(au.level)                          as upgrade_level 
             FROM matches_players_details as mpd
             INNER JOIN heroes ON (mpd.hero_id = heroes.id) 
             INNER JOIN matches ON (mpd.match_id = matches.id) 
