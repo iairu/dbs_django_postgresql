@@ -151,12 +151,12 @@ def v2_players_game_objectives(request, player_id):
         # SQL + agregacie do noveho zoskupenia "matches" (vratane obsahu buducich sub-agregacii)
         data = aggregate(sql_query_all("""
 
-            SELECT players.id               	as id, 
-            COALESCE(players.nick,'unknown')    as player_nick, 
-            matches.id 							as match_id, 
-            heroes.localized_name           	as hero_localized_name, 
-            COALESCE(gobj.subtype, 'NO_ACTION') as hero_action,
-            COUNT(gobj.subtype)                 as count
+            SELECT players.id               	       as id, 
+            COALESCE(players.nick,'unknown')           as player_nick, 
+            matches.id 							       as match_id, 
+            heroes.localized_name           	       as hero_localized_name, 
+            COALESCE(gobj.subtype, 'NO_ACTION')        as hero_action,
+            COUNT(COALESCE(gobj.subtype, 'NO_ACTION')) as count
             FROM matches_players_details as mpd 
             INNER JOIN heroes ON (mpd.hero_id = heroes.id) 
             INNER JOIN matches ON (mpd.match_id = matches.id) 
