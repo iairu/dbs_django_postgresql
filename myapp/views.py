@@ -125,30 +125,39 @@ def v2_players_game_objectives(request, player_id):
     #     }
     #   ]
     # }
-    try: # nejake zabezpecenie aspon, nemozeme predsa poslat cokolvek z URL na SQL server
+    try:
+        # zabezpecenie vstupu od pouzivatela pred SQL: povolene len ciselne znaky
         secure_player_id = int(player_id)
+        # SQL + agregacie do noveho zoskupenia "matches" (vratane obsahu buducich sub-agregacii)
         data = aggregate(sql_query_all("""
-        SELECT player_id as id, COALESCE(nick,'unknown') as player_nick, match_id, 
-        localized_name as hero_localized_name, COALESCE(subtype, 'NO_ACTION') as hero_action,
-        COUNT(subtype) as count
-        FROM matches_players_details 
-        INNER JOIN heroes ON (matches_players_details.hero_id = heroes.id) 
-        INNER JOIN matches ON (matches_players_details.match_id = matches.id) 
-        INNER JOIN players ON (player_id = players.id) 
-        FULL OUTER JOIN game_objectives ON (matches_players_details.id = match_player_detail_id_1)
-        WHERE player_id = """ + str(secure_player_id) + """ GROUP BY player_id, player_nick, match_id, hero_localized_name, hero_action;
+
+            SELECT players.id               	as id, 
+            COALESCE(players.nick,'unknown')    as player_nick, 
+            matches.id 							as match_id, 
+            heroes.localized_name           	as hero_localized_name, 
+            COALESCE(gobj.subtype, 'NO_ACTION') as hero_action,
+            COUNT(gobj.subtype)                 as count
+            FROM matches_players_details as mpd 
+            INNER JOIN heroes ON (mpd.hero_id = heroes.id) 
+            INNER JOIN matches ON (mpd.match_id = matches.id) 
+            INNER JOIN players ON (mpd.player_id = players.id) 
+            FULL OUTER JOIN game_objectives as gobj ON (mpd.id = gobj.match_player_detail_id_1)
+            WHERE player_id = """ + str(secure_player_id) + """ 
+            GROUP BY players.id, players_nick, matches.id, heroes.localized_name, hero_action;
+
         """), key="id", new_group="matches", will_group=["match_id", "hero_localized_name", "hero_action", "count"])
-        data = data[0] if len(data) else {"error": "no data"}
-        # todo: vykonat \/ len ak nebol v riadku nad tymto error a existuje data["matches"] inac ignore
-        data["matches"] = aggregate(data["matches"], key="match_id", new_group="actions", will_group=["hero_action", "count"])
-        return HttpResponse(
-            # chyba ak ziadne data napr. nenajdene player_id
-            json.dumps(data), content_type="application/json; charset=utf-8", status=200)
+        # Vybratie prveho vysledku agregacie (v tomto pripade moze byt jedine 1 alebo ziadne kedze cely query sa tyka len 1 hraca) alebo zaznacenie neexistencie
+        data = data[0] if len(data) else None
+        # Dalsie agregacie v ramci matches do noveho zoskupenia "actions"
+        if (data): data["matches"] = aggregate(data["matches"], key="match_id", new_group="actions", will_group=["hero_action", "count"])
+        # 404 "error" ak ziadne data napr. nenajdene player_id, inac 200
+        return HttpResponse(json.dumps(data if data else {"error": "no data"}), content_type="application/json; charset=utf-8", status=200 if data else 404)
     except BaseException as err:
-        return HttpResponse(
-            json.dumps({
-                "error": str(err)
-                }), content_type="application/json; charset=utf-8", status=400) # bad request
+        # 400 "error" ak napr. player_id na vstupe obsahuje neciselne znaky + 500 catch all
+        if "invalid literal for int" in str(err):
+            return HttpResponse(json.dumps({"error": "invalid player_id"}), content_type="application/json; charset=utf-8", status=400) # bad request
+        else:
+            return HttpResponse(json.dumps({"error": "internal error"}), content_type="application/json; charset=utf-8", status=500) # internal error
 
 def v2_players_abilities(request, player_id):
     # {
