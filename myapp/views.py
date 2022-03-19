@@ -153,7 +153,7 @@ def v2_players_game_objectives(request, player_id):
             INNER JOIN players ON (mpd.player_id = players.id) 
             FULL OUTER JOIN game_objectives as gobj ON (mpd.id = gobj.match_player_detail_id_1)
             WHERE player_id = """ + str(secure_player_id) + """ 
-            GROUP BY players.id, players_nick, matches.id, heroes.localized_name, hero_action;
+            GROUP BY players.id, player_nick, matches.id, heroes.localized_name, hero_action;
 
         """), key="id", new_group="matches", will_group=["match_id", "hero_localized_name", "hero_action", "count"])
         # Vybratie prveho vysledku agregacie (v tomto pripade moze byt jedine 1 alebo ziadne kedze cely query sa tyka len 1 hraca) alebo zaznacenie neexistencie
