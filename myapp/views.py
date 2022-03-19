@@ -62,7 +62,7 @@ def v2_patches(request):
         )
         SELECT my_patches.*, 
         matches.id 																		as match_id, 
-        ROUND(matches.duration::decimal / 100, 2) 										as duration
+        ROUND(matches.duration::decimal / 60, 2) 										as duration
         FROM my_patches 
         LEFT OUTER JOIN matches ON (matches.start_time >= my_patches.patch_start_date AND 
                                     matches.start_time <= COALESCE(my_patches.patch_end_date, EXTRACT(EPOCH FROM NOW())::integer));
