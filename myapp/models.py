@@ -43,7 +43,9 @@ def aggregate(l: list[dict], key, new_group, will_group: list[str]):
             tmp = {}
             for i, x in enumerate(will_group):
                 tmp[x] = d[will_group[i]]
-            a_entry[new_group].append(tmp)
+            # Kontrola ze ci v danej casti vobec su nejake hodnoty (teda ak obsahuje len null -> nepridat)
+            if not all(value == None for value in tmp.values()):
+                a_entry[new_group].append(tmp)
         else: # Ak sa jedna o novu hodnotu kluca
             if (a_keyval != None): a_list.append(a_entry) # Ak uz bola agregacia, treba ju ulozit
             a_keyval = d[key] # Nova hodnota kluca
@@ -53,7 +55,8 @@ def aggregate(l: list[dict], key, new_group, will_group: list[str]):
             tmp = {}
             for i, x in enumerate(will_group):
                 tmp[x] = d[will_group[i]]
-            a_entry[new_group].append(tmp)
+            if not all(value == None for value in tmp.values()):
+                a_entry[new_group].append(tmp)
             for x in will_group: a_entry.pop(x) # Odobranie povodnej formy uz agregovanych casti
     if (a_keyval != None): a_list.append(a_entry) # Treba ulozit poslednu agregaciu
     return a_list # Navrat "agregovanych" "de-duplikovanych" prvkov
