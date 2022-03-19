@@ -78,35 +78,45 @@ def v2_players_game_exp(request, player_id):
     #     }
     #   ]
     # }
-    try: # nejake zabezpecenie aspon, nemozeme predsa poslat cokolvek z URL na SQL server
+    try:
+        # zabezpecenie vstupu od pouzivatela pred SQL: povolene len ciselne znaky
         secure_player_id = int(player_id)
+        # SQL + agregacie do noveho zoskupenia "matches"
         data = aggregate(sql_query_all("""
-            SELECT player_id as id, COALESCE(nick,'unknown') as player_nick, match_id, 
-            localized_name as hero_localized_name, round(duration::decimal / 60, 2) as match_duration_minutes, 
-            (COALESCE(matches_players_details.xp_hero,0) + 
-            COALESCE(matches_players_details.xp_creep,0) + 
-            COALESCE(matches_players_details.xp_other,0) + 
-            COALESCE(matches_players_details.xp_roshan,0)) as experiences_gained, 
-            level as level_gained,
-            CASE WHEN radiant_win AND player_slot >= 0 AND player_slot <= 4  THEN true
-                WHEN not radiant_win AND player_slot >= 128 AND player_slot <= 132 THEN true
+
+            SELECT players.id 							as id, 
+            COALESCE(players.nick, 'unknown') 			as player_nick, 
+            matches.id 									as match_id,
+            heroes.localized_name 						as hero_localized_name, 
+            ROUND(matches.duration::decimal / 60, 2)	as match_duration_minutes, 
+            (COALESCE(mpd.xp_hero,0) + 
+             COALESCE(mpd.xp_creep,0) + 
+             COALESCE(mpd.xp_other,0) + 
+             COALESCE(mpd.xp_roshan,0)) 				as experiences_gained, 
+            mpd.level									as level_gained,
+            CASE WHEN     matches.radiant_win AND mpd.player_slot >= 0   AND mpd.player_slot <= 4   THEN true
+                 WHEN not matches.radiant_win AND mpd.player_slot >= 128 AND mpd.player_slot <= 132 THEN true
                  ELSE false
-            END as winner
-            FROM matches_players_details 
-            INNER JOIN heroes ON (matches_players_details.hero_id = heroes.id) 
-            INNER JOIN matches ON (matches_players_details.match_id = matches.id) 
-            INNER JOIN players ON (player_id = players.id)
-            WHERE player_id = """ + str(secure_player_id) + """ ORDER BY match_id ASC;
+            END 										as winner
+            FROM matches_players_details as mpd
+            INNER JOIN heroes ON (mpd.hero_id = heroes.id) 
+            INNER JOIN matches ON (mpd.match_id = matches.id) 
+            INNER JOIN players ON (mpd.player_id = players.id)
+            WHERE player_id = """ + str(secure_player_id) + """ 
+            ORDER BY matches.id ASC;
+
         """), key="id", new_group="matches", will_group=["match_id", "hero_localized_name", "match_duration_minutes",
         "experiences_gained", "level_gained", "winner"])
-        return HttpResponse(
-            # chyba ak ziadne data napr. nenajdene player_id
-            json.dumps(data[0] if len(data) else {"error": "no data"}), content_type="application/json; charset=utf-8", status=200)
+        # Vybratie prveho vysledku agregacie (v tomto pripade moze byt jedine 1 alebo ziadne kedze cely query sa tyka len 1 hraca) alebo zaznacenie neexistencie
+        data = data[0] if len(data) else None
+        # 404 "error" ak ziadne data napr. nenajdene player_id, inac 200
+        return HttpResponse(json.dumps(data if data else {"error": "no data"}), content_type="application/json; charset=utf-8", status=200 if data else 404)
     except BaseException as err:
-        return HttpResponse(
-            json.dumps({
-                "error": str(err)
-                }), content_type="application/json; charset=utf-8", status=400) # bad request
+        # 400 "error" ak napr. player_id na vstupe obsahuje neciselne znaky + 500 catch all
+        if "invalid literal for int" in str(err):
+            return HttpResponse(json.dumps({"error": "invalid player_id"}), content_type="application/json; charset=utf-8", status=400) # bad request
+        else:
+            return HttpResponse(json.dumps({"error": "internal error"}), content_type="application/json; charset=utf-8", status=500) # internal error
 
 def v2_players_game_objectives(request, player_id):
     # {
