@@ -4,3 +4,4 @@ venv
 env_dev.bat
 env_prod.bat
 mysite/static
+/*.zip
