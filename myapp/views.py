@@ -48,20 +48,30 @@ def v2_patches(request):
     #     }
     #   ]
     # }
-    return HttpResponse(
-        json.dumps({"patches": aggregate(sql_query_all("""
-            WITH my_patches AS
-            (
-                SELECT 
-                name as patch_version, 
-                EXTRACT(EPOCH FROM release_date)::integer as patch_start_date, 
-                LEAD(EXTRACT(EPOCH FROM release_date)::integer, 1) OVER (ORDER BY name) as patch_end_date
-                FROM patches
-                ORDER BY patch_version ASC
-            )
-            SELECT my_patches.*, matches.id as match_id, round(matches.duration::decimal / 100, 2) as duration
-            FROM my_patches LEFT OUTER JOIN matches ON (matches.start_time >= my_patches.patch_start_date AND matches.start_time <= my_patches.patch_end_date);
-            """), key="patch_version", new_group="matches", will_group=["match_id", "duration"]) }), content_type="application/json; charset=utf-8", status=200)
+    try:
+        # SQL + agregacie do noveho zoskupenia "matches"
+        data = aggregate(sql_query_all("""
+
+        WITH my_patches AS
+        (
+            SELECT name 																as patch_version, 
+                 EXTRACT(EPOCH FROM release_date)::integer 								as patch_start_date, 
+            LEAD(EXTRACT(EPOCH FROM release_date)::integer, 1) OVER (ORDER BY name)  	as patch_end_date
+            FROM patches
+            ORDER BY patch_version ASC
+        )
+        SELECT my_patches.*, 
+        matches.id 																		as match_id, 
+        ROUND(matches.duration::decimal / 100, 2) 										as duration
+        FROM my_patches 
+        LEFT OUTER JOIN matches ON (matches.start_time >= my_patches.patch_start_date AND 
+                                    matches.start_time <= COALESCE(my_patches.patch_end_date, EXTRACT(EPOCH FROM NOW())::integer));
+
+        """), key="patch_version", new_group="matches", will_group=["match_id", "duration"])
+        return HttpResponse(json.dumps({"patches": data }), content_type="application/json; charset=utf-8", status=200)
+    except BaseException as err:
+        # 500 "error" catch all
+        return HttpResponse(json.dumps({"error": "internal error"}), content_type="application/json; charset=utf-8", status=500) # internal error
 
 def v2_players_game_exp(request, player_id):
     # {
