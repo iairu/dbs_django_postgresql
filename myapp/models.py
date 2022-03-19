@@ -1,5 +1,4 @@
 from django.db import models, connections
-from itertools import groupby
 
 
 def _dict_fetch_one(cursor): 
