@@ -26,11 +26,11 @@ def index(request):
 def v1_health(request):
     # content_type a pod.: https://docs.djangoproject.com/en/4.0/ref/request-response/#id4
     # django ma namiesto HttpResponse aj JsonResponse, ale mam pocit ze pointa bola precvicit si manualne MIME type nastavenie
-    return HttpResponse(
-        json.dumps({"pgsql":{ # spojenie dvoch dict do jedneho cez unpack operator **
-            **sql_query_one("SELECT VERSION()"), 
-            **sql_query_one("SELECT pg_database_size('dota2')/1024/1024 as dota2_db_size")
-            }}), content_type="application/json; charset=utf-8", status=200)
+    data = sql_query_one("""
+        SELECT VERSION() as version,
+        pg_database_size('dota2')/1024/1024 as dota2_db_size;
+    """)
+    return HttpResponse(json.dumps({"pgsql": data}), content_type="application/json; charset=utf-8", status=200)
 
 def v2_patches(request):
     # {
