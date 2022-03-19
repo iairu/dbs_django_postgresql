@@ -26,11 +26,15 @@ def index(request):
 def v1_health(request):
     # content_type a pod.: https://docs.djangoproject.com/en/4.0/ref/request-response/#id4
     # django ma namiesto HttpResponse aj JsonResponse, ale mam pocit ze pointa bola precvicit si manualne MIME type nastavenie
-    data = sql_query_one("""
-        SELECT VERSION() as version,
-        pg_database_size('dota2')/1024/1024 as dota2_db_size;
-    """)
-    return HttpResponse(json.dumps({"pgsql": data}), content_type="application/json; charset=utf-8", status=200)
+    try:
+        data = sql_query_one("""
+            SELECT VERSION() as version,
+            pg_database_size('dota2')/1024/1024 as dota2_db_size;
+        """)
+        return HttpResponse(json.dumps({"pgsql": data}), content_type="application/json; charset=utf-8", status=200)
+    except BaseException as err:
+        # 500 "error" catch all
+        return HttpResponse(json.dumps({"error": "internal error"}), content_type="application/json; charset=utf-8", status=500) # internal error
 
 def v2_patches(request):
     # {
