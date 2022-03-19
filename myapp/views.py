@@ -90,7 +90,7 @@ def v2_players_game_exp(request, player_id):
             level as level_gained,
             CASE WHEN radiant_win AND player_slot >= 0 AND player_slot <= 4  THEN true
                 WHEN not radiant_win AND player_slot >= 128 AND player_slot <= 132 THEN true
-                ELSE false
+                 ELSE false
             END as winner
             FROM matches_players_details 
             INNER JOIN heroes ON (matches_players_details.hero_id = heroes.id) 
@@ -168,22 +168,38 @@ def v2_players_abilities(request, player_id):
     #     }
     #   ]
     # }
-    try: # nejake zabezpecenie aspon, nemozeme predsa poslat cokolvek z URL na SQL server
+    try: 
+        # zabezpecenie vstupu od pouzivatela pred SQL: povolene len ciselne znaky
         secure_player_id = int(player_id)
-        return HttpResponse(
-            json.dumps({
-                "id": secure_player_id,
-                **sql_query_one("SELECT COALESCE(nick,'unknown') as player_nick FROM players WHERE id = " + str(secure_player_id) + ";"),
-                "matches": sql_query_all("""
-                    SELECT match_id, localized_name as hero_localized_name, 'todo' as abilities
-                    FROM matches_players_details 
-                    INNER JOIN heroes ON (matches_players_details.hero_id = heroes.id) 
-                    INNER JOIN matches ON (matches_players_details.match_id = matches.id)
-                    WHERE player_id = """ + str(secure_player_id) + """;
-                """)
-                }), content_type="application/json; charset=utf-8", status=200)
+        # SQL + agregacie do noveho zoskupenia "matches" (vratane obsahu buducich sub-agregacii)
+        data = aggregate(sql_query_all("""
+
+            SELECT players.id 					as id, 
+            COALESCE(players.nick,'unknown') 	as player_nick, 
+            matches.id 							as match_id, 
+            heroes.localized_name 				as hero_localized_name, 
+            ab.name 							as ability_name, 
+            COUNT(ab.name) 						as count,
+            MAX(au.level) 						as upgrade_level 
+            FROM matches_players_details as mpd
+            INNER JOIN heroes ON (mpd.hero_id = heroes.id) 
+            INNER JOIN matches ON (mpd.match_id = matches.id) 
+            INNER JOIN players ON (mpd.player_id = players.id) 
+            INNER JOIN ability_upgrades as au ON (mpd.id = au.match_player_detail_id)
+            INNER JOIN abilities as ab ON (au.ability_id = ab.id)
+            WHERE player_id = """ + str(secure_player_id) + """ 
+            GROUP BY players.id, player_nick, matches.id, heroes.localized_name, ab.name;
+
+        """), key="id", new_group="matches", will_group=["match_id", "hero_localized_name", "ability_name", "count", "upgrade_level"])
+        # Vybratie prveho vysledku agregacie (v tomto pripade moze byt jedine 1 alebo ziadne kedze cely query sa tyka len 1 hraca) alebo zaznacenie neexistencie
+        data = data[0] if len(data) else None
+        # Dalsie agregacie v ramci matches do noveho zoskupenia "abilities"
+        if (data): data["matches"] = aggregate(data["matches"], key="match_id", new_group="abilities", will_group=["ability_name", "count", "upgrade_level"])
+        # 404 "error" ak ziadne data napr. nenajdene player_id, inac 200
+        return HttpResponse(json.dumps(data if data else {"error": "no data"}), content_type="application/json; charset=utf-8", status=200 if data else 404)
     except BaseException as err:
-        return HttpResponse(
-            json.dumps({
-                "error": str(err)
-                }), content_type="application/json; charset=utf-8", status=400) # bad request
+        # 400 "error" ak napr. player_id na vstupe obsahuje neciselne znaky + 500 catch all
+        if "invalid literal for int" in str(err):
+            return HttpResponse(json.dumps({"error": "invalid player_id"}), content_type="application/json; charset=utf-8", status=400) # bad request
+        else:
+            return HttpResponse(json.dumps({"error": "internal error"}), content_type="application/json; charset=utf-8", status=500) # internal error
