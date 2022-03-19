@@ -5,6 +5,105 @@ Python 3.10.2
 Django 4.0
 ```
 
+## SQL Queries
+
+### Zadanie 2
+
+> /v1/health
+
+```sql
+SELECT VERSION() as version,
+pg_database_size('dota2')/1024/1024 as dota2_db_size;
+```
+
+### Zadanie 3
+
+> /v2/patches
+
+```sql
+WITH my_patches AS
+(
+    SELECT name 								   	as patch_version, 
+         EXTRACT(EPOCH FROM release_date)::integer 	as patch_start_date, 
+    LEAD(EXTRACT(EPOCH FROM release_date)::integer, 1) OVER (ORDER BY name)  	
+    												as patch_end_date
+    FROM patches
+    ORDER BY patch_version ASC
+)
+SELECT my_patches.*, 
+matches.id 											as match_id, 
+ROUND(matches.duration::decimal / 60, 2) 			as duration
+FROM my_patches 
+LEFT OUTER JOIN matches ON (matches.start_time >= my_patches.patch_start_date AND 
+                            matches.start_time <= COALESCE(my_patches.patch_end_date,
+                            EXTRACT(EPOCH FROM NOW())::integer));
+
+```
+
+> /v2/players/<player_id>/game_exp
+
+```sql
+SELECT players.id 							as id, 
+COALESCE(players.nick, 'unknown') 			as player_nick, 
+matches.id 									as match_id,
+heroes.localized_name 						as hero_localized_name, 
+ROUND(matches.duration::decimal / 60, 2)	as match_duration_minutes, 
+(COALESCE(mpd.xp_hero,0) + 
+ COALESCE(mpd.xp_creep,0) + 
+ COALESCE(mpd.xp_other,0) + 
+ COALESCE(mpd.xp_roshan,0)) 				as experiences_gained, 
+mpd.level									as level_gained,
+CASE WHEN     matches.radiant_win AND mpd.player_slot >= 0   AND mpd.player_slot <= 4   THEN true
+     WHEN not matches.radiant_win AND mpd.player_slot >= 128 AND mpd.player_slot <= 132 THEN true
+     ELSE false
+END 										as winner
+FROM matches_players_details as mpd
+INNER JOIN heroes ON (mpd.hero_id = heroes.id) 
+INNER JOIN matches ON (mpd.match_id = matches.id) 
+INNER JOIN players ON (mpd.player_id = players.id)
+WHERE player_id = """ + str(secure_player_id) + """ 
+ORDER BY matches.id ASC;
+```
+
+> /v2/players/<player_id>/game_objectives
+
+```sql
+SELECT players.id               	       as id, 
+COALESCE(players.nick,'unknown')           as player_nick, 
+matches.id 							       as match_id, 
+heroes.localized_name           	       as hero_localized_name, 
+COALESCE(gobj.subtype, 'NO_ACTION')        as hero_action,
+COUNT(COALESCE(gobj.subtype, 'NO_ACTION')) as count
+FROM matches_players_details as mpd 
+INNER JOIN heroes ON (mpd.hero_id = heroes.id) 
+INNER JOIN matches ON (mpd.match_id = matches.id) 
+INNER JOIN players ON (mpd.player_id = players.id) 
+FULL OUTER JOIN game_objectives as gobj ON (mpd.id = gobj.match_player_detail_id_1)
+WHERE player_id = """ + str(secure_player_id) + """ 
+GROUP BY players.id, player_nick, matches.id, heroes.localized_name, hero_action;
+
+```
+
+> /v2/players/<player_id>/abilities
+
+```sql
+SELECT players.id 					as id, 
+COALESCE(players.nick,'unknown') 	as player_nick, 
+matches.id 							as match_id, 
+heroes.localized_name 				as hero_localized_name, 
+ab.name 							as ability_name, 
+COUNT(ab.name) 						as count,
+MAX(au.level) 						as upgrade_level 
+FROM matches_players_details as mpd
+INNER JOIN heroes ON (mpd.hero_id = heroes.id) 
+INNER JOIN matches ON (mpd.match_id = matches.id) 
+INNER JOIN players ON (mpd.player_id = players.id) 
+INNER JOIN ability_upgrades as au ON (mpd.id = au.match_player_detail_id)
+INNER JOIN abilities as ab ON (au.ability_id = ab.id)
+WHERE player_id = """ + str(secure_player_id) + """ 
+GROUP BY players.id, player_nick, matches.id, heroes.localized_name, ab.name;
+```
+
 ## Sprevádzkovanie
 
 1. jednorázovo: `python -m venv venv` vytvorí virtuálny environment
