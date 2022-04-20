@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponse
 
-from .models import sql_query_all, sql_query_one, aggregate # priama SQL podpora
+from .models import sql_query_all, sql_query_one, aggregate, constrained_max, rename_keys # priama SQL podpora
 import simplejson as json
 
 # Create your views here.
