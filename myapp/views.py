@@ -268,6 +268,30 @@ def v3_matches_top_purchases(request, match_id):
     #     }
     #   ]
     #   }
+    
+    # SELECT id, name, item_id, item_name, item_count FROM (
+    # SELECT mpd.hero_id as id, 
+    # h.localized_name as name, 
+    # pl.item_id as item_id, 
+    # i.name as item_name, 
+    # count(pl.item_id) as item_count,
+    # ROW_NUMBER() OVER (
+    # PARTITION BY mpd.hero_id 
+    # ORDER BY mpd.hero_id ASC, count(pl.item_id) DESC, i.name DESC) as row
+
+    # FROM matches_players_details as mpd 
+    # INNER JOIN matches as m ON m.id = mpd.match_id
+    # INNER JOIN heroes as h ON h.id = mpd.hero_id
+    # INNER JOIN purchase_logs as pl ON mpd.id = pl.match_player_detail_id
+    # INNER JOIN items as i ON i.id = pl.item_id
+
+    # WHERE match_id = >>>>>>>>>EDIT_THIS<<<<<<<<< 
+    # AND ((m.radiant_win AND player_slot >= 0 AND player_slot <= 4) OR (player_slot >= 128 AND player_slot <= 132)) 
+    # GROUP BY mpd.hero_id, h.localized_name, pl.item_id, i.name 
+    # ORDER BY id ASC, item_count DESC, item_name DESC
+
+    # ) as foo WHERE row <= 5;
+
     return HttpResponse(json.dumps({"error": "not yet implemented"}), content_type="application/json; charset=utf-8", status=404)
 
 
