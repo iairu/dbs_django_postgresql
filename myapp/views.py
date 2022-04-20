@@ -282,7 +282,7 @@ def v3_matches_top_purchases(request, match_id):
             count(pl.item_id) as item_count,
             ROW_NUMBER() OVER (
             PARTITION BY mpd.hero_id 
-            ORDER BY mpd.hero_id ASC, count(pl.item_id) DESC, i.name DESC) as row
+            ORDER BY mpd.hero_id ASC, count(pl.item_id) DESC, i.name ASC) as row
 
             FROM matches_players_details as mpd 
             INNER JOIN matches as m ON m.id = mpd.match_id
@@ -293,7 +293,7 @@ def v3_matches_top_purchases(request, match_id):
             WHERE match_id = """ + str(secure_match_id) + """
             AND ((m.radiant_win AND player_slot >= 0 AND player_slot <= 4) OR (player_slot >= 128 AND player_slot <= 132)) 
             GROUP BY mpd.hero_id, h.localized_name, pl.item_id, i.name 
-            ORDER BY id ASC, item_count DESC, item_name DESC
+            ORDER BY id ASC, item_count DESC, item_name ASC
 
             ) as x WHERE row <= 5;
 
@@ -348,48 +348,76 @@ def v3_abilities_usage(request, ability_id):
         # SQL
         data = sql_query_all("""
 
-            SELECT *, COUNT(bucket) as count
-            FROM (SELECT 
-                a.id                as ability_id, 
-                a.name              as ability_name, 
-                mpd.hero_id         as hero_id, 
-                h.localized_name    as hero_name, 
-                CASE WHEN m.radiant_win AND mpd.player_slot >= 0 AND mpd.player_slot <= 4 THEN true
-                    WHEN not m.radiant_win AND mpd.player_slot >= 128 AND mpd.player_slot <= 132 THEN true
-                    ELSE false END as winner,
-                CASE WHEN percentage >= 0 AND percentage < 10 THEN '0-9'
-                    WHEN percentage >= 10 AND percentage < 20 THEN '10-19'
-                    WHEN percentage >= 20 AND percentage < 30 THEN '20-29'
-                    WHEN percentage >= 30 AND percentage < 40 THEN '30-39'
-                    WHEN percentage >= 40 AND percentage < 50 THEN '40-49'
-                    WHEN percentage >= 50 AND percentage < 60 THEN '50-59'
-                    WHEN percentage >= 60 AND percentage < 70 THEN '60-69'
-                    WHEN percentage >= 70 AND percentage < 80 THEN '70-79'
-                    WHEN percentage >= 80 AND percentage < 90 THEN '80-89'
-                    WHEN percentage >= 90 AND percentage < 100 THEN '90-99'
-                    ELSE '100-109' END as bucket
-                FROM ability_upgrades as au
-                INNER JOIN abilities as a ON a.id = au.ability_id
-                INNER JOIN matches_players_details as mpd ON mpd.id = au.match_player_detail_id
-                INNER JOIN matches as m ON m.id = mpd.match_id
-                INNER JOIN heroes as h ON h.id = mpd.hero_id,
-                LATERAL COALESCE((au.time::decimal / m.duration::decimal) * 100) as sub(percentage)
-                WHERE a.id = """ + str(secure_ability_id) + """
-            ) as x 
-            GROUP BY ability_id, ability_name, winner, hero_id, hero_name, bucket
-            ORDER BY hero_id ASC, winner DESC, count DESC;
+            WITH results AS (
+                SELECT * 
+                FROM (
+                    SELECT *, COUNT(bucket) as count,
+                    ROW_NUMBER() OVER (PARTITION BY hero_id, winner ORDER BY COUNT(bucket) DESC) as row_n
+                    FROM (
+                        SELECT 
+                        a.id                as ability_id, 
+                        a.name              as ability_name, 
+                        mpd.hero_id         as hero_id, 
+                        h.localized_name    as hero_name, 
+                        CASE WHEN m.radiant_win AND mpd.player_slot >= 0 AND mpd.player_slot <= 4 THEN true
+                            WHEN not m.radiant_win AND mpd.player_slot >= 128 AND mpd.player_slot <= 132 THEN true
+                            ELSE false END as winner,
+                        CASE WHEN percentage >= 0 AND percentage < 10 THEN '0-9'
+                            WHEN percentage >= 10 AND percentage < 20 THEN '10-19'
+                            WHEN percentage >= 20 AND percentage < 30 THEN '20-29'
+                            WHEN percentage >= 30 AND percentage < 40 THEN '30-39'
+                            WHEN percentage >= 40 AND percentage < 50 THEN '40-49'
+                            WHEN percentage >= 50 AND percentage < 60 THEN '50-59'
+                            WHEN percentage >= 60 AND percentage < 70 THEN '60-69'
+                            WHEN percentage >= 70 AND percentage < 80 THEN '70-79'
+                            WHEN percentage >= 80 AND percentage < 90 THEN '80-89'
+                            WHEN percentage >= 90 AND percentage < 100 THEN '90-99'
+                            ELSE '100-109' END as bucket
+                        FROM ability_upgrades as au
+                        INNER JOIN abilities as a ON a.id = au.ability_id
+                        INNER JOIN matches_players_details as mpd ON mpd.id = au.match_player_detail_id
+                        INNER JOIN matches as m ON m.id = mpd.match_id
+                        INNER JOIN heroes as h ON h.id = mpd.hero_id,
+                        LATERAL COALESCE((au.time::decimal / m.duration::decimal) * 100) as sub(percentage)
+                        WHERE a.id = """ + str(secure_ability_id) + """
+                    ) as x
+                    GROUP BY ability_id, ability_name, winner, hero_id, hero_name, bucket
+                    ORDER BY hero_id ASC, winner DESC, count DESC
+                ) as x WHERE row_n = 1
+            )
+            
+            SELECT ability_id, ability_name, hero_id, hero_name, 
+            MAX(win_bucket) as usage_winners_bucket, MAX(win_count) as usage_winners_count, 
+            MAX(lose_bucket) as usage_losers_bucket, MAX(lose_count) as usage_losers_count
+            FROM (
+                SELECT ability_id, ability_name, hero_id, hero_name, 
+                bucket as win_bucket, count as win_count, NULL as lose_bucket, NULL as lose_count 
+                FROM results WHERE winner IS TRUE
+            UNION
+                SELECT ability_id, ability_name, hero_id, hero_name, 
+                NULL as win_bucket, NULL as win_count, bucket as lose_bucket, count as lose_count
+                FROM results WHERE winner IS FALSE
+            ) as x GROUP BY ability_id, ability_name, hero_id, hero_name;
 
         """)
 
-        # v prvom rade sa vytiahne ability_id a ability_name nad zvysnymi hodnotami, ktore budu odteraz v heroes
-        # funkciu agregacie som navrhol pre komplexnejsie ucely (napr. rozne ability_id), ktore tu niesu, takze sa
-        # nasledne vytiahne len data[0] lebo je len jeden ability_id v celom query
-        data = aggregate(data, "ability_id", "heroes", ["hero_id", "hero_name", "winner", "bucket", "count"])
-        data = data[0] if len(data) else None
-        # nasledne pre heroes sa najde maximum podla rozdielnych hodnot winner
-        if (data): data["heroes"] = constrained_max(data["heroes"], "hero_id", "winner", "count", ["hero_name"])
-        # rekurzivne premenovanie klucov, pretoze maju byt na roznych urovniach rovnake, co sa pred agregaciou neda
-        if (data): data = rename_keys(data, ["ability_id", "ability_name", "hero_id", "hero_name", "true", "false"], ["id", "name", "id", "name", "usage_winners", "usage_loosers"])
+        # usage_winners a usage_loosers agregacia
+        data = aggregate(data, "hero_id", "usage_winners", ["usage_winners_bucket", "usage_winners_count"])
+        if (data):
+            for x in data:
+                if (x["usage_winners"]): x["usage_winners"] = x["usage_winners"][0]
+        if (data): data = aggregate(data, "hero_id", "usage_loosers", ["usage_losers_bucket", "usage_losers_count"])
+        if (data):
+            for x in data:
+                if (x["usage_loosers"]): x["usage_loosers"] = x["usage_loosers"][0]
+        if (data):data = aggregate(data, "ability_id", "heroes", ["hero_id", "hero_name", "usage_winners", "usage_loosers"])
+        if (data): data = data[0] if len(data) else None
+
+        if (data): data = rename_keys(data, 
+            ["hero_id", "hero_name", "usage_winners_bucket", "usage_winners_count", "usage_losers_bucket", "usage_losers_count"], 
+            ["id", "name", "bucket", "count", "bucket", "count"]
+            )
+
         # 404 "error" ak ziadne data napr. nenajdene ability_id, inac 200
         return HttpResponse(json.dumps(data if data else {"error": "no data"}), content_type="application/json; charset=utf-8", status=200 if data else 404)
     except BaseException as err:
@@ -464,7 +492,7 @@ def v3_statistics_tower_kills(request):
             ) AS x
             INNER JOIN heroes as h ON h.id = hero_id
             GROUP BY hero_id, h.localized_name
-            ORDER BY MAX(match_heroid_sequence) DESC, id DESC;
+            ORDER BY MAX(match_heroid_sequence) DESC, name ASC;
 
         """)
 
