@@ -104,6 +104,102 @@ WHERE player_id = """ + str(secure_player_id) + """
 GROUP BY players.id, player_nick, matches.id, heroes.localized_name, ab.name;
 ```
 
+### Zadanie 3
+
+> /v3/matches/21421/top_purchases/
+
+```sql
+SELECT id, name, item_id, item_name, item_count FROM (
+SELECT mpd.hero_id as id, 
+h.localized_name as name, 
+pl.item_id as item_id, 
+i.name as item_name, 
+count(pl.item_id) as item_count,
+ROW_NUMBER() OVER (
+PARTITION BY mpd.hero_id 
+ORDER BY mpd.hero_id ASC, count(pl.item_id) DESC, i.name DESC) as row
+
+FROM matches_players_details as mpd 
+INNER JOIN matches as m ON m.id = mpd.match_id
+INNER JOIN heroes as h ON h.id = mpd.hero_id
+INNER JOIN purchase_logs as pl ON mpd.id = pl.match_player_detail_id
+INNER JOIN items as i ON i.id = pl.item_id
+
+WHERE match_id = """ + str(secure_match_id) + """
+AND ((m.radiant_win AND player_slot >= 0 AND player_slot <= 4) OR 
+	(player_slot >= 128 AND player_slot <= 132)) 
+GROUP BY mpd.hero_id, h.localized_name, pl.item_id, i.name 
+ORDER BY id ASC, item_count DESC, item_name DESC
+
+) as x WHERE row <= 5;
+```
+
+> /v3/abilities/5004/usage/
+
+```sql
+SELECT *, COUNT(bucket) as count
+FROM (SELECT 
+a.id                as ability_id, 
+a.name              as ability_name, 
+mpd.hero_id         as hero_id, 
+h.localized_name    as hero_name, 
+CASE WHEN m.radiant_win AND mpd.player_slot >= 0 AND mpd.player_slot <= 4 THEN true
+WHEN not m.radiant_win AND mpd.player_slot >= 128 AND mpd.player_slot <= 132 THEN true
+ELSE false END as winner,
+CASE WHEN percentage >= 0 AND percentage < 10 THEN '0-9'
+WHEN percentage >= 10 AND percentage < 20 THEN '10-19'
+WHEN percentage >= 20 AND percentage < 30 THEN '20-29'
+WHEN percentage >= 30 AND percentage < 40 THEN '30-39'
+WHEN percentage >= 40 AND percentage < 50 THEN '40-49'
+WHEN percentage >= 50 AND percentage < 60 THEN '50-59'
+WHEN percentage >= 60 AND percentage < 70 THEN '60-69'
+WHEN percentage >= 70 AND percentage < 80 THEN '70-79'
+WHEN percentage >= 80 AND percentage < 90 THEN '80-89'
+WHEN percentage >= 90 AND percentage < 100 THEN '90-99'
+ELSE '100-109' END as bucket
+FROM ability_upgrades as au
+INNER JOIN abilities as a ON a.id = au.ability_id
+INNER JOIN matches_players_details as mpd ON mpd.id = au.match_player_detail_id
+INNER JOIN matches as m ON m.id = mpd.match_id
+INNER JOIN heroes as h ON h.id = mpd.hero_id,
+LATERAL COALESCE((au.time::decimal / m.duration::decimal) * 100) as sub(percentage)
+WHERE a.id = """ + str(secure_ability_id) + """
+) as x 
+GROUP BY ability_id, ability_name, winner, hero_id, hero_name, bucket
+ORDER BY hero_id ASC, winner DESC, count DESC;
+```
+
+> /v3/statistics/tower_kills/
+
+```sql
+SELECT hero_id as id, h.localized_name as name, MAX(match_heroid_sequence) as tower_kills
+FROM(
+SELECT time, hero_id, match_id,
+ROW_NUMBER() OVER (PARTITION BY match_id, hero_id, match_content_counting - match_heroid_counting ORDER BY match_content_counting) as match_heroid_sequence
+FROM(
+SELECT time, hero_id, match_id,  
+ROW_NUMBER() OVER (PARTITION BY match_id ORDER BY time) as match_content_counting,
+ROW_NUMBER() OVER (PARTITION BY match_id, hero_id ORDER BY match_id, time) as match_heroid_counting
+FROM (
+SELECT gao.id, gao.match_player_detail_id_1 as mpd_id, gao.time, gao.subtype, mpd1.hero_id, mpd1.match_id
+FROM game_objectives as gao
+INNER JOIN matches_players_details as mpd1 ON mpd1.id = gao.match_player_detail_id_1
+WHERE gao.subtype = 'CHAT_MESSAGE_TOWER_KILL' AND (gao.match_player_detail_id_1 IS NOT NULL OR gao.match_player_detail_id_2 IS NOT NULL)
+UNION ALL
+SELECT gao.id, gao.match_player_detail_id_2 as mpd_id, gao.time, gao.subtype, mpd2.hero_id, mpd2.match_id
+FROM game_objectives as gao
+INNER JOIN matches_players_details as mpd2 ON mpd2.id = gao.match_player_detail_id_2
+WHERE gao.subtype = 'CHAT_MESSAGE_TOWER_KILL' AND (gao.match_player_detail_id_1 IS NOT NULL OR gao.match_player_detail_id_2 IS NOT NULL)
+ORDER BY match_id, time
+) AS x 
+) AS x
+ORDER BY match_id, time
+) AS x
+INNER JOIN heroes as h ON h.id = hero_id
+GROUP BY hero_id, h.localized_name
+ORDER BY MAX(match_heroid_sequence) DESC, id DESC;
+```
+
 ## Sprevádzkovanie
 
 1. jednorázovo: `python -m venv venv` vytvorí virtuálny environment
