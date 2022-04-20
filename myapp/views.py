@@ -268,31 +268,48 @@ def v3_matches_top_purchases(request, match_id):
     #     }
     #   ]
     #   }
-    
-    # SELECT id, name, item_id, item_name, item_count FROM (
-    # SELECT mpd.hero_id as id, 
-    # h.localized_name as name, 
-    # pl.item_id as item_id, 
-    # i.name as item_name, 
-    # count(pl.item_id) as item_count,
-    # ROW_NUMBER() OVER (
-    # PARTITION BY mpd.hero_id 
-    # ORDER BY mpd.hero_id ASC, count(pl.item_id) DESC, i.name DESC) as row
+    try: 
+        # zabezpecenie vstupu od pouzivatela pred SQL: povolene len ciselne znaky
+        secure_match_id = int(match_id)
+        # SQL
+        data = sql_query_all("""
 
-    # FROM matches_players_details as mpd 
-    # INNER JOIN matches as m ON m.id = mpd.match_id
-    # INNER JOIN heroes as h ON h.id = mpd.hero_id
-    # INNER JOIN purchase_logs as pl ON mpd.id = pl.match_player_detail_id
-    # INNER JOIN items as i ON i.id = pl.item_id
+            SELECT id, name, item_id, item_name, item_count FROM (
+            SELECT mpd.hero_id as id, 
+            h.localized_name as name, 
+            pl.item_id as item_id, 
+            i.name as item_name, 
+            count(pl.item_id) as item_count,
+            ROW_NUMBER() OVER (
+            PARTITION BY mpd.hero_id 
+            ORDER BY mpd.hero_id ASC, count(pl.item_id) DESC, i.name DESC) as row
 
-    # WHERE match_id = >>>>>>>>>EDIT_THIS<<<<<<<<< 
-    # AND ((m.radiant_win AND player_slot >= 0 AND player_slot <= 4) OR (player_slot >= 128 AND player_slot <= 132)) 
-    # GROUP BY mpd.hero_id, h.localized_name, pl.item_id, i.name 
-    # ORDER BY id ASC, item_count DESC, item_name DESC
+            FROM matches_players_details as mpd 
+            INNER JOIN matches as m ON m.id = mpd.match_id
+            INNER JOIN heroes as h ON h.id = mpd.hero_id
+            INNER JOIN purchase_logs as pl ON mpd.id = pl.match_player_detail_id
+            INNER JOIN items as i ON i.id = pl.item_id
 
-    # ) as foo WHERE row <= 5;
+            WHERE match_id = """ + str(secure_match_id) + """
+            AND ((m.radiant_win AND player_slot >= 0 AND player_slot <= 4) OR (player_slot >= 128 AND player_slot <= 132)) 
+            GROUP BY mpd.hero_id, h.localized_name, pl.item_id, i.name 
+            ORDER BY id ASC, item_count DESC, item_name DESC
 
-    return HttpResponse(json.dumps({"error": "not yet implemented"}), content_type="application/json; charset=utf-8", status=404)
+            ) as x WHERE row <= 5;
+
+        """)
+
+        if (data): data = aggregate(data, "name", "top_purchases", ["item_id", "item_name", "item_count"])
+        if (data): data = rename_keys(data, ["item_id", "item_name", "item_count"], ["id", "name", "count"])
+        if (data): data = {"id": secure_match_id, "heroes": data}
+        # 404 "error" ak ziadne data napr. nenajdene ability_id, inac 200
+        return HttpResponse(json.dumps(data if data else {"error": "no data"}), content_type="application/json; charset=utf-8", status=200 if data else 404)
+    except BaseException as err:
+        # 400 "error" ak napr. player_id na vstupe obsahuje neciselne znaky + 500 catch all
+        if "invalid literal for int" in str(err):
+            return HttpResponse(json.dumps({"error": "invalid match_id"}), content_type="application/json; charset=utf-8", status=400) # bad request
+        else:
+            return HttpResponse(json.dumps({"error": "internal error " + str(err)}), content_type="application/json; charset=utf-8", status=500) # internal error
 
 
 def v3_abilities_usage(request, ability_id):
