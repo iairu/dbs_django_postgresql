@@ -16,6 +16,10 @@ def index(request):
             <a href=\"/v2/players/14944/game_exp/\">/v2/players/14944/game_exp/</a><br>
             <a href=\"/v2/players/14944/game_objectives/\">/v2/players/14944/game_objectives/</a><br>
             <a href=\"/v2/players/14944/abilities/\">/v2/players/14944/abilities/</a><br>
+            <br>
+            <a href=\"/v3/matches/21421/top_purchases/\">/v3/matches/21421/top_purchases/</a><br>
+            <a href=\"/v3/abilities/5004/usage/\">/v3/abilities/5004/usage/</a><br>
+            <a href=\"/v3/statistics/tower_kills/\">/v3/statistics/tower_kills/</a><br>
         </nav>
         <h2>Relevant stuff</h2>
         <nav>
@@ -239,3 +243,92 @@ def v2_players_abilities(request, player_id):
             return HttpResponse(json.dumps({"error": "invalid player_id"}), content_type="application/json; charset=utf-8", status=400) # bad request
         else:
             return HttpResponse(json.dumps({"error": "internal error"}), content_type="application/json; charset=utf-8", status=500) # internal error
+            
+
+def v3_matches_top_purchases(request, match_id):
+    # 2,5b
+    # Pre vybranú hru identifikovanú v URL ako {match_id} a v nej
+    # víťazný tím, vytvorte pre každého hrdinu zoznam piatich
+    # najčastejšie nakúpených predmetov. Výsledky zoraďte podľa id
+    # hrdinu vzostupne a podľa počtu jeho nákupov daného predmetu
+    # zostupne. Sekundárne zoradenie je podľa item_name zostupne.
+    # {
+    #   "id": 21421,
+    #   "heroes": [
+    #     {
+    #       "id": 18,
+    #       "name": "Sven",
+    #       "top_purchases": [
+    #         {
+    #           "id": 46,
+    #           "name": "tpscroll",
+    #           "count": 25
+    #         }
+    #       ]
+    #     }
+    #   ]
+    #   }
+    return HttpResponse(json.dumps({"error": "not yet implemented"}), content_type="application/json; charset=utf-8", status=404)
+
+
+def v3_abilities_usage(request, ability_id):
+    # 3,5b
+    # Pre vybranú schopnosť identifikovanú v URL ako {ability_id},
+    # (abilities.id) porovnajte v ktorej časti hry si ju víťazní a
+    # porazení hráči najčastejšie vybrali. Rozdeľte hru
+    # (matches.duration) na percentuálne rozsahy podľa času - 0-9,
+    # 10-19, 20-29, 30-39, 40-49, 50-59, 60-69, 70-79, 80-89, 90-99,
+    # 100-109 a do nich zatrieďte všetky vybraté schopností podľa času
+    # ich vybratia (ability_upgrades.time) a podľa hrdinu. Vo výsledku
+    # teda budete vedieť, pre ktorého hrdinu je v ktorej percentuálnej
+    # časti hry spraviť dané vylepšenie schopnosti ak bol víťaz aj keď
+    # bol porazený. Výsledky zoraďte podľa id hrdinu vzostupne.
+    # { 
+    #   "id": 5004,
+    #   "name": "antimage_blink",
+    #   "heroes": [
+    #     {
+    #       "id": 1,
+    #       "name": "Anti-Mage",
+    #       "usage_winners": {
+    #         "bucket": "20-29",
+    #         "count": 3373
+    #       },
+    #       "usage_loosers": {
+    #         "bucket": "10-19",
+    #         "count": 3272
+    #       }
+    #     }
+    #   ]
+    #   }
+    return HttpResponse(json.dumps({"error": "not yet implemented"}), content_type="application/json; charset=utf-8", status=404)
+
+def v3_statistics_tower_kills(request):
+    # 4,5b
+    # Vytvorte zoznam hrdinov (heroes.localized_name) a každému
+    # priraďte sumu reprezentujúcu počet zabití veží
+    # (game_objectives.subtype = 'CHAT_MESSAGE_TOWER_KILL') za sebou
+    # (v sekvencii) v jednej hre jedným hrdinom. Pod "za sebou" sa
+    # myslí zoradenie zabitia veží pre danú hru hrdinom v čase od
+    # začiatku po koniec hry. Ak hrdina v hre zabije prvú, druhú a
+    # tretiu vežu v poradí a iný hrdina zabije štvrtú vežu v poradí,
+    # tak suma pre danú sekvenciu zabitia veží prvého hrdinu je 3. V
+    # jednej hre však môže mať jeden hrdina viac takýchto sekvencií.
+    # Vaša query má teda vybrať pre všetky zápasy a všetkých hrdinov
+    # najdlhšiu sekvenciu zabitia veží daným hrdinom v poradí a
+    # zobraziť najdlhšiu sekvenciu pre každého hrdinu (hrdina je
+    # výstupe len raz). Zoznam hrdinov zoraďte podľa počtu zabití v
+    # sekvencii od najväčšieho po najmenší. V prípade, že veža je
+    # zabitá NPC postavami match_player_detail_id1 = null a tiež
+    # match_player_detail_id2 = null, tak takéto záznamy ignorujte pre
+    # výpočet sekvencie.
+    # {
+    #   "heroes": [
+    #     {
+    #       "id": 18,
+    #       "name": "Sven",
+    #       "tower_kills": 11
+    #     }
+    #   ]
+    #   }
+    return HttpResponse(json.dumps({"error": "not yet implemented"}), content_type="application/json; charset=utf-8", status=404)
