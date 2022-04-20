@@ -345,7 +345,7 @@ def v3_abilities_usage(request, ability_id):
     try: 
         # zabezpecenie vstupu od pouzivatela pred SQL: povolene len ciselne znaky
         secure_ability_id = int(ability_id)
-        # SQL + agregacie do noveho zoskupenia "matches" (vratane obsahu buducich sub-agregacii)
+        # SQL
         data = sql_query_all("""
 
             SELECT *, COUNT(bucket) as count
@@ -428,4 +428,49 @@ def v3_statistics_tower_kills(request):
     #     }
     #   ]
     #   }
-    return HttpResponse(json.dumps({"error": "not yet implemented"}), content_type="application/json; charset=utf-8", status=404)
+    try:
+        # SQL
+        data = sql_query_all("""
+
+            -- priradenie hero_id pre jednotlive mpd_id
+            -- rozdelenie mpd_id1 a mpd_id2 do separatnych riadkov cez UNION ALL pricom NOT(IS NULL AND IS NULL) => IS NOT NULL OR IS NOT NULL => vyhodenie NULL parov
+            -- \_ i ked tu nevidim zmysel pri CHAT_MESSAGE_TOWER_KILL lebo mpd_id2 je vzdy null, tak to dava zmysel pre viac vseobecne riesenie 
+            -- zoradenie podla id znamena zoradenie v case hry (kedze pocas hry sa postupne pridavali do tabulky hodnoty neskor = vyssie id), co potvrdzuje aj odvodena zoradenost match_id
+            -- rozdelenie id v danom case do particii podla match_id vdaka ROW_NUMBER PARTITION
+            -- vnorene selecty a viacero PARTITION pre match_heroid_sequence lokalne pocitany (a nie pre cely match) trikom odcitania, lebo jeden PARTITION je tohto zjavne neschopny
+
+            SELECT hero_id as id, h.localized_name as name, MAX(match_heroid_sequence) as tower_kills
+            FROM(
+                SELECT time, hero_id, match_id,
+                ROW_NUMBER() OVER (PARTITION BY match_id, hero_id, match_content_counting - match_heroid_counting ORDER BY match_content_counting) as match_heroid_sequence
+                FROM(
+                    SELECT time, hero_id, match_id,  
+                    ROW_NUMBER() OVER (PARTITION BY match_id ORDER BY time) as match_content_counting,
+                    ROW_NUMBER() OVER (PARTITION BY match_id, hero_id ORDER BY match_id, time) as match_heroid_counting
+                    FROM (
+                        SELECT gao.id, gao.match_player_detail_id_1 as mpd_id, gao.time, gao.subtype, mpd1.hero_id, mpd1.match_id
+                        FROM game_objectives as gao
+                        INNER JOIN matches_players_details as mpd1 ON mpd1.id = gao.match_player_detail_id_1
+                        WHERE gao.subtype = 'CHAT_MESSAGE_TOWER_KILL' AND (gao.match_player_detail_id_1 IS NOT NULL OR gao.match_player_detail_id_2 IS NOT NULL)
+                        UNION ALL
+                        SELECT gao.id, gao.match_player_detail_id_2 as mpd_id, gao.time, gao.subtype, mpd2.hero_id, mpd2.match_id
+                        FROM game_objectives as gao
+                        INNER JOIN matches_players_details as mpd2 ON mpd2.id = gao.match_player_detail_id_2
+                        WHERE gao.subtype = 'CHAT_MESSAGE_TOWER_KILL' AND (gao.match_player_detail_id_1 IS NOT NULL OR gao.match_player_detail_id_2 IS NOT NULL)
+                        ORDER BY match_id, time
+                    ) AS x 
+                ) AS x
+                ORDER BY match_id, time
+            ) AS x
+            INNER JOIN heroes as h ON h.id = hero_id
+            GROUP BY hero_id, h.localized_name
+            ORDER BY MAX(match_heroid_sequence) DESC, id DESC;
+
+        """)
+
+        # data = aggregate(data, "ability_id", "heroes", ["hero_id", "hero_name", "winner", "bucket", "count"])
+        # 404 "error" ak ziadne data napr. nenajdene ability_id, inac 200
+        return HttpResponse(json.dumps({"heroes": data} if data else {"error": "no data"}), content_type="application/json; charset=utf-8", status=200 if data else 404)
+    except BaseException as err:
+        # 400 "error" ak napr. player_id na vstupe obsahuje neciselne znaky + 500 catch all
+        return HttpResponse(json.dumps({"error": "internal error " + str(err)}), content_type="application/json; charset=utf-8", status=500) # internal error
