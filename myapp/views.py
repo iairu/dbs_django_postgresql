@@ -1,7 +1,6 @@
-from django.shortcuts import render
 from django.http import HttpResponse
 
-from .models import sql_query_all, sql_query_one, aggregate, constrained_max, rename_keys # priama SQL podpora
+from .raw import sql_query_all, sql_query_one, aggregate, constrained_max, rename_keys # priama SQL podpora
 import simplejson as json
 
 # Create your views here.
@@ -309,7 +308,7 @@ def v3_matches_top_purchases(request, match_id):
         if "invalid literal for int" in str(err):
             return HttpResponse(json.dumps({"error": "invalid match_id"}), content_type="application/json; charset=utf-8", status=400) # bad request
         else:
-            return HttpResponse(json.dumps({"error": "internal error " + str(err)}), content_type="application/json; charset=utf-8", status=500) # internal error
+            return HttpResponse(json.dumps({"error": "internal error"}), content_type="application/json; charset=utf-8", status=500) # internal error
 
 
 def v3_abilities_usage(request, ability_id):
@@ -397,7 +396,7 @@ def v3_abilities_usage(request, ability_id):
         if "invalid literal for int" in str(err):
             return HttpResponse(json.dumps({"error": "invalid ability_id"}), content_type="application/json; charset=utf-8", status=400) # bad request
         else:
-            return HttpResponse(json.dumps({"error": "internal error " + str(err)}), content_type="application/json; charset=utf-8", status=500) # internal error
+            return HttpResponse(json.dumps({"error": "internal error"}), content_type="application/json; charset=utf-8", status=500) # internal error
 
 
 def v3_statistics_tower_kills(request):
@@ -473,4 +472,4 @@ def v3_statistics_tower_kills(request):
         return HttpResponse(json.dumps({"heroes": data} if data else {"error": "no data"}), content_type="application/json; charset=utf-8", status=200 if data else 404)
     except BaseException as err:
         # 400 "error" ak napr. player_id na vstupe obsahuje neciselne znaky + 500 catch all
-        return HttpResponse(json.dumps({"error": "internal error " + str(err)}), content_type="application/json; charset=utf-8", status=500) # internal error
+        return HttpResponse(json.dumps({"error": "internal error"}), content_type="application/json; charset=utf-8", status=500) # internal error

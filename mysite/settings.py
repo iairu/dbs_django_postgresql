@@ -79,7 +79,10 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {},
+    'default': {
+        # 'ENGINE': 'django.db.backends.sqlite3',
+        # 'NAME': 'mydota2.sqlite3'
+    },
     'readonly': {
         'ENGINE': 'django.db.backends.postgresql',
         'HOST': os.environ.get('DBHOST'),

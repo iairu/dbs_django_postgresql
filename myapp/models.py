@@ -1,144 +1,312 @@
-from os import rename
-from tokenize import group
-from django.db import models, connections
+# Pouzity prikaz: python manage.py inspectdb --database readonly > models.py
+#
+# This is an auto-generated Django model module.
+# You'll have to do the following manually to clean this up:
+#   * Rearrange models' order
+#   * Make sure each model has one field with primary_key=True
+#   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
+#   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
+# Feel free to rename the models, but don't rename db_table values or field names.
+from django.db import models
 
 
-def _dict_fetch_one(cursor): 
-    # z Django docs https://docs.djangoproject.com/en/4.0/topics/db/sql/#executing-custom-sql-directly
-    columns = [col[0] for col in cursor.description]
-    # return [dict(zip(columns, row)) for row in cursor.fetchall()] # povodne: vsetky zaznamy
-    # return dict(zip(columns, (cursor.fetchone(), cursor.fetchone()))) # dva zaznamy
-    return dict(zip(columns, (cursor.fetchone()))) # jeden zaznam
+class Abilities(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.TextField(blank=True, null=True)
 
-def _dict_fetch_all(cursor): 
-    # z Django docs https://docs.djangoproject.com/en/4.0/topics/db/sql/#executing-custom-sql-directly
-    columns = [col[0] for col in cursor.description]
-    return [dict(zip(columns, row)) for row in cursor.fetchall()] # povodne: vsetky zaznamy
+    class Meta:
+        managed = False
+        db_table = 'abilities'
 
-# Create your models here.
-def sql_query_one(cursor_query: str): 
-    # z Django docs https://docs.djangoproject.com/en/4.0/topics/db/sql/#executing-custom-sql-directly
-    # treba opatrne s SQL, pretoze sa nad nim robia nejake upravy (napr. neukoncuje sa s ;), vid dokumentaciu
-    with connections['readonly'].cursor() as cursor:
-        cursor.execute(cursor_query)
-        out = _dict_fetch_one(cursor)
-    return out
 
-def sql_query_all(cursor_query: str): 
-    # z Django docs https://docs.djangoproject.com/en/4.0/topics/db/sql/#executing-custom-sql-directly
-    # treba opatrne s SQL, pretoze sa nad nim robia nejake upravy (napr. neukoncuje sa s ;), vid dokumentaciu
-    with connections['readonly'].cursor() as cursor:
-        cursor.execute(cursor_query)
-        out = _dict_fetch_all(cursor)
-    return out
+class AbilityUpgrades(models.Model):
+    ability = models.ForeignKey(Abilities, models.DO_NOTHING, blank=True, null=True)
+    match_player_detail = models.ForeignKey('MatchesPlayersDetails', models.DO_NOTHING, blank=True, null=True)
+    level = models.IntegerField(blank=True, null=True)
+    time = models.IntegerField(blank=True, null=True)
 
-# priklad pouzitia: aggregate(a, "patch_version", "matches", ["match_id", "duration"])
-def aggregate(l: list[dict], key, new_group, will_group: list[str]):
-    # ocakava sa na vstupe zoradeny obsah listu na zaklade key, kedze kluce spaja v poradi vyskytu
-    # a znamena aggregated
-    a_keyval = None
-    a_entry: dict = {}
-    a_list: list[dict] = []
-    for d in l:
-        if (d[key] == a_keyval): # Ak sa jedna o rovnaku hodnotu kluca
-            # Pridanie casti na agregovanie z tohto riadku k existujucej agregacii
-            tmp = {}
-            for i, x in enumerate(will_group):
-                tmp[x] = d[will_group[i]]
-            # Kontrola ze ci v danej casti vobec su nejake hodnoty (teda ak obsahuje len null -> nepridat)
-            if not all(value == None for value in tmp.values()):
-                a_entry[new_group].append(tmp)
-        else: # Ak sa jedna o novu hodnotu kluca
-            if (a_keyval != None): a_list.append(a_entry) # Ak uz bola agregacia, treba ju ulozit
-            a_keyval = d[key] # Nova hodnota kluca
-            a_entry = d # Nova agregacia k tomuto prvku (prvy vyskyt)
-            # Agregacia samotneho prveho prvku
-            a_entry[new_group] = []
-            tmp = {}
-            for i, x in enumerate(will_group):
-                tmp[x] = d[will_group[i]]
-            if not all(value == None for value in tmp.values()):
-                a_entry[new_group].append(tmp)
-            for x in will_group: a_entry.pop(x) # Odobranie povodnej formy uz agregovanych casti
-    if (a_keyval != None): a_list.append(a_entry) # Treba ulozit poslednu agregaciu
-    return a_list # Navrat "agregovanych" "de-duplikovanych" prvkov
-    
-# priklad pouzitia: constrained_max(a, "hero_id", "winner", "count", ["ability_id", "ability_name", "hero_name"])
-def constrained_max(l: list[dict], group_key, constrain_key, max_key, extract_keys = []):
-    # max_key definuje, z ktoreho stlpca sa ponecha len najvacsia najdena hodnota pre
-    # rozdielne najdene hodnoty constrain_key, pricom toto sa vykona separatne pre kazdy
-    # rozdielny group key
-    # navrh struktury: mpc[group] = {constrain_found_value: row_with_max, ...}
-    # povodne som sa pokusil o riesenie tohto cez SQL ale prislo mi to prilis komplexne
-    # s potrebnostou viacerych vnorenych SELECTov, potreba row merge, menej prehladne zoskupovanie v GROUP BY na rozdiel od jedneho kluca tu, ...
-    mpc = list() # max_per_constrain[group_value]
-    for d in l: # d => row ako dictionary
-        # group_key: najdi / inicializuj dict pre group vo vysledku
-        mpc_group = None
-        # skus najst
-        for g in mpc: 
-            if (g[group_key] == d[group_key]): 
-                mpc_group = g
-                break
-        # inicializacia ak nenajdena
-        if (mpc_group == None): 
-            mpc_group = dict()
-            mpc_group[group_key] = d[group_key]
-            mpc.append(mpc_group) # toto je len link, nie kopia (mpc_group je dalej pouzity ako odkaz)
-        # inicializacia s prvou hodnotou / vymena s dalsou vacsou az eventuelne max
-        if ((not d[constrain_key] in mpc_group) or (d[max_key] > mpc_group[d[constrain_key]][max_key])):
-            for extract_key in extract_keys: # vytiahni vsetky hodnoty na extrahovanie mimo constrain o uroven vyssie
-                # je to ako keby opak agregacie, ocakava sa ze hodnoty su zamenitelne za group_key, ale ak niesu
-                # tak sa pouziju jednoducho tie relevantne pre najdene maximum, avsak v takom pripade nie je implementovane
-                # rozlisenie medzi constrain_keys a teda hodnota najdena u maxima posledneho constrain_key vyhrava
-                mpc_group[extract_key] = d[extract_key]
-                del d[extract_key] # nasledne hodnoty odstran z riadku, lebo nema zmysel ich davat do urovne nizsie
-            mpc_group[d[constrain_key]] = d # nastav obsah constrain dictu na cely zvysok riadku
-            del d[constrain_key] # odstran constrain_key z hodnot riadku, pretoze jeho rozdielne hodnoty uz su
-            # pouzite ako agregatory (constrainy) resp. extrahovane na vyssiu uroven, takze nie je dovod uchovavat
-            del d[group_key] # podobne, odstran group_key, pretoze uz bol extrahovany na vyssiu uroven
-            # a nie je dovod ho uchovavat duplicitne aj na tejto urovni
-    return mpc
+    class Meta:
+        managed = False
+        db_table = 'ability_upgrades'
+# Unable to inspect table 'alembic_version'
+# The error was: permission denied for table alembic_version
+# Unable to inspect table 'auth_group'
+# The error was: permission denied for table auth_group
+# Unable to inspect table 'auth_group_permissions'
+# The error was: permission denied for table auth_group_permissions
+# Unable to inspect table 'auth_groups'
+# The error was: permission denied for table auth_groups
+# Unable to inspect table 'auth_permission'
+# The error was: permission denied for table auth_permission
+# Unable to inspect table 'auth_permissions'
+# The error was: permission denied for table auth_permissions
+# Unable to inspect table 'auth_user'
+# The error was: permission denied for table auth_user
+# Unable to inspect table 'auth_user_groups'
+# The error was: permission denied for table auth_user_groups
+# Unable to inspect table 'auth_user_user_permissions'
+# The error was: permission denied for table auth_user_user_permissions
+# Unable to inspect table 'auth_users'
+# The error was: permission denied for table auth_users
 
-# kvoli kapitalizacii hodnot ako True, False a jej zmene na lowercase pri konverzii na json
-# tato funkcia taktiez pred porovnanim s keys_before zmeni ostatne keys na lowercase => pouzit lowercase v keys_before
-# ponechal som zakomentovane debug vypisy pre debugovanie rekurize, v buducnosti pri hlbsom komplexnejsom nestingu bude
-# mozno vhodne zaviest aj max_recurse_depth parameter
-# napr: rename_keys(data, ["ability_id", "ability_name", "True", "False"], ["id", "name", "usage_winners", "usage_loosers"])
-def rename_keys(nest, keys_before: list, keys_after: list):
-    # nest musi byt bud list alebo dict, inak je vrateny v povodnom stave
-    if isinstance(nest, list): # rekurzia do listov
-        for i, field in enumerate(nest):
-            nest[i] = rename_keys(field, keys_before, keys_after)
-    elif isinstance(nest, dict): # aplikovanie zmien v dictoch
-        new_nest = dict()
-        for key in nest:
-            lkey = str(key).lower() # konverzia na lowercase string pre kontrolu
-            if (lkey in keys_before):
-                # index na ktorom sa v keys_before kluc nasiel je rovnaky ako index noveho kluca v keys_after
-                # nastavenie new_nest[new_key] na hodnotu predchadzajuceho => premenovanie
-                # povodne som chcel jednoduchy .pop, ale python potrebuje aby sa kluce pocas iteracii nemenili,
-                # takze cely obsah dictu sa musi premiestnit do noveho
-                if (isinstance(nest[key], dict) or isinstance(nest[key], list)):
-                    # rekurzia do hodnot dictu tiez ak su podporovane
-                    # print(lkey + " is dict or list and also renamed to " + keys_after[keys_before.index(lkey)])
-                    # print("[recurse]")
-                    new_nest[keys_after[keys_before.index(lkey)]] = rename_keys(nest[key], keys_before, keys_after)
-                    # print("[recurse end]")
-                else:
-                    # ak tu nie je viac podporovaneho nestingu, jednoducho prirad hodnotu
-                    # print(lkey + " is renamed to " + keys_after[keys_before.index(lkey)])
-                    new_nest[keys_after[keys_before.index(lkey)]] = nest[key]
-            else:
-                if (isinstance(nest[key], dict) or isinstance(nest[key], list)):
-                    # rekurzia do hodnot dictu tiez ak su podporovane
-                    # print(lkey + " is dict or list not found in keys_before to be renamed")
-                    # print("[recurse]")
-                    new_nest[key] = rename_keys(nest[key], keys_before, keys_after)
-                    # print("[recurse end]")
-                else:
-                    # ak tu nie je viac podporovaneho nestingu, jednoducho prirad hodnotu
-                    # print(lkey + " is not found in keys_before to be renamed")
-                    new_nest[key] = nest[key]
-        nest = new_nest
-    return nest
+
+class Chats(models.Model):
+    match_player_detail = models.ForeignKey('MatchesPlayersDetails', models.DO_NOTHING, blank=True, null=True)
+    message = models.TextField(blank=True, null=True)
+    time = models.IntegerField(blank=True, null=True)
+    nick = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'chats'
+
+
+class ClusterRegions(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'cluster_regions'
+# Unable to inspect table 'django_admin_log'
+# The error was: permission denied for table django_admin_log
+# Unable to inspect table 'django_admin_logs'
+# The error was: permission denied for table django_admin_logs
+# Unable to inspect table 'django_content_type'
+# The error was: permission denied for table django_content_type
+# Unable to inspect table 'django_content_types'
+# The error was: permission denied for table django_content_types
+# Unable to inspect table 'django_migrations'
+# The error was: permission denied for table django_migrations
+# Unable to inspect table 'django_session'
+# The error was: permission denied for table django_session
+# Unable to inspect table 'django_sessions'
+# The error was: permission denied for table django_sessions
+# Unable to inspect table 'doctrine_migration_versions'
+# The error was: permission denied for table doctrine_migration_versions
+# Unable to inspect table 'flyway_schema_history'
+# The error was: permission denied for table flyway_schema_history
+
+
+class GameObjectives(models.Model):
+    match_player_detail_id_1 = models.ForeignKey('MatchesPlayersDetails', models.DO_NOTHING, db_column='match_player_detail_id_1', blank=True, null=True)
+    match_player_detail_id_2 = models.ForeignKey('MatchesPlayersDetails', models.DO_NOTHING, db_column='match_player_detail_id_2', blank=True, null=True)
+    key = models.IntegerField(blank=True, null=True)
+    subtype = models.TextField(blank=True, null=True)
+    team = models.IntegerField(blank=True, null=True)
+    time = models.IntegerField(blank=True, null=True)
+    value = models.IntegerField(blank=True, null=True)
+    slot = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'game_objectives'
+
+
+class Heroes(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.TextField(blank=True, null=True)
+    localized_name = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'heroes'
+
+
+class Items(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'items'
+# Unable to inspect table 'languages'
+# The error was: permission denied for table languages
+
+
+class Matches(models.Model):
+    id = models.IntegerField(primary_key=True)
+    cluster_region = models.ForeignKey(ClusterRegions, models.DO_NOTHING, blank=True, null=True)
+    start_time = models.IntegerField(blank=True, null=True)
+    duration = models.IntegerField(blank=True, null=True)
+    tower_status_radiant = models.IntegerField(blank=True, null=True)
+    tower_status_dire = models.IntegerField(blank=True, null=True)
+    barracks_status_radiant = models.IntegerField(blank=True, null=True)
+    barracks_status_dire = models.IntegerField(blank=True, null=True)
+    first_blood_time = models.IntegerField(blank=True, null=True)
+    game_mode = models.IntegerField(blank=True, null=True)
+    radiant_win = models.BooleanField(blank=True, null=True)
+    negative_votes = models.IntegerField(blank=True, null=True)
+    positive_votes = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'matches'
+
+
+class MatchesPlayersDetails(models.Model):
+    match = models.ForeignKey(Matches, models.DO_NOTHING, blank=True, null=True)
+    player = models.ForeignKey('Players', models.DO_NOTHING, blank=True, null=True)
+    hero = models.ForeignKey(Heroes, models.DO_NOTHING, blank=True, null=True)
+    player_slot = models.IntegerField(blank=True, null=True)
+    gold = models.IntegerField(blank=True, null=True)
+    gold_spent = models.IntegerField(blank=True, null=True)
+    gold_per_min = models.IntegerField(blank=True, null=True)
+    xp_per_min = models.IntegerField(blank=True, null=True)
+    kills = models.IntegerField(blank=True, null=True)
+    deaths = models.IntegerField(blank=True, null=True)
+    assists = models.IntegerField(blank=True, null=True)
+    denies = models.IntegerField(blank=True, null=True)
+    last_hits = models.IntegerField(blank=True, null=True)
+    stuns = models.IntegerField(blank=True, null=True)
+    hero_damage = models.IntegerField(blank=True, null=True)
+    hero_healing = models.IntegerField(blank=True, null=True)
+    tower_damage = models.IntegerField(blank=True, null=True)
+    item_id_1 = models.ForeignKey(Items, models.DO_NOTHING, db_column='item_id_1', blank=True, null=True)
+    item_id_2 = models.ForeignKey(Items, models.DO_NOTHING, db_column='item_id_2', blank=True, null=True)
+    item_id_3 = models.ForeignKey(Items, models.DO_NOTHING, db_column='item_id_3', blank=True, null=True)
+    item_id_4 = models.ForeignKey(Items, models.DO_NOTHING, db_column='item_id_4', blank=True, null=True)
+    item_id_5 = models.ForeignKey(Items, models.DO_NOTHING, db_column='item_id_5', blank=True, null=True)
+    item_id_6 = models.ForeignKey(Items, models.DO_NOTHING, db_column='item_id_6', blank=True, null=True)
+    level = models.IntegerField(blank=True, null=True)
+    leaver_status = models.IntegerField(blank=True, null=True)
+    xp_hero = models.IntegerField(blank=True, null=True)
+    xp_creep = models.IntegerField(blank=True, null=True)
+    xp_roshan = models.IntegerField(blank=True, null=True)
+    xp_other = models.IntegerField(blank=True, null=True)
+    gold_other = models.IntegerField(blank=True, null=True)
+    gold_death = models.IntegerField(blank=True, null=True)
+    gold_buyback = models.IntegerField(blank=True, null=True)
+    gold_abandon = models.IntegerField(blank=True, null=True)
+    gold_sell = models.IntegerField(blank=True, null=True)
+    gold_destroying_structure = models.IntegerField(blank=True, null=True)
+    gold_killing_heroes = models.IntegerField(blank=True, null=True)
+    gold_killing_creeps = models.IntegerField(blank=True, null=True)
+    gold_killing_roshan = models.IntegerField(blank=True, null=True)
+    gold_killing_couriers = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'matches_players_details'
+# Unable to inspect table 'migrations'
+# The error was: permission denied for table migrations
+# Unable to inspect table 'mobiles'
+# The error was: permission denied for table mobiles
+
+
+class Patches(models.Model):
+    name = models.TextField()
+    release_date = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = 'patches'
+
+
+class PlayerActions(models.Model):
+    unit_order_none = models.IntegerField(blank=True, null=True)
+    unit_order_move_to_position = models.IntegerField(blank=True, null=True)
+    unit_order_move_to_target = models.IntegerField(blank=True, null=True)
+    unit_order_attack_move = models.IntegerField(blank=True, null=True)
+    unit_order_attack_target = models.IntegerField(blank=True, null=True)
+    unit_order_cast_position = models.IntegerField(blank=True, null=True)
+    unit_order_cast_target = models.IntegerField(blank=True, null=True)
+    unit_order_cast_target_tree = models.IntegerField(blank=True, null=True)
+    unit_order_cast_no_target = models.IntegerField(blank=True, null=True)
+    unit_order_cast_toggle = models.IntegerField(blank=True, null=True)
+    unit_order_hold_position = models.IntegerField(blank=True, null=True)
+    unit_order_train_ability = models.IntegerField(blank=True, null=True)
+    unit_order_drop_item = models.IntegerField(blank=True, null=True)
+    unit_order_give_item = models.IntegerField(blank=True, null=True)
+    unit_order_pickup_item = models.IntegerField(blank=True, null=True)
+    unit_order_pickup_rune = models.IntegerField(blank=True, null=True)
+    unit_order_purchase_item = models.IntegerField(blank=True, null=True)
+    unit_order_sell_item = models.IntegerField(blank=True, null=True)
+    unit_order_disassemble_item = models.IntegerField(blank=True, null=True)
+    unit_order_move_item = models.IntegerField(blank=True, null=True)
+    unit_order_cast_toggle_auto = models.IntegerField(blank=True, null=True)
+    unit_order_stop = models.IntegerField(blank=True, null=True)
+    unit_order_buyback = models.IntegerField(blank=True, null=True)
+    unit_order_glyph = models.IntegerField(blank=True, null=True)
+    unit_order_eject_item_from_stash = models.IntegerField(blank=True, null=True)
+    unit_order_cast_rune = models.IntegerField(blank=True, null=True)
+    unit_order_ping_ability = models.IntegerField(blank=True, null=True)
+    unit_order_move_to_direction = models.IntegerField(blank=True, null=True)
+    match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'player_actions'
+
+
+class PlayerRatings(models.Model):
+    player = models.ForeignKey('Players', models.DO_NOTHING, blank=True, null=True)
+    total_wins = models.IntegerField(blank=True, null=True)
+    total_matches = models.IntegerField(blank=True, null=True)
+    trueskill_mu = models.DecimalField(max_digits=65535, decimal_places=65535, blank=True, null=True)
+    trueskill_sigma = models.DecimalField(max_digits=65535, decimal_places=65535, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'player_ratings'
+
+
+class PlayerTimes(models.Model):
+    match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True)
+    time = models.IntegerField(blank=True, null=True)
+    gold = models.IntegerField(blank=True, null=True)
+    lh = models.IntegerField(blank=True, null=True)
+    xp = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'player_times'
+
+
+class Players(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.TextField(blank=True, null=True)
+    nick = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'players'
+# Unable to inspect table 'propel_migration'
+# The error was: permission denied for table propel_migration
+
+
+class PurchaseLogs(models.Model):
+    match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True)
+    item = models.ForeignKey(Items, models.DO_NOTHING, blank=True, null=True)
+    time = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'purchase_logs'
+
+
+class Teamfights(models.Model):
+    match = models.ForeignKey(Matches, models.DO_NOTHING, blank=True, null=True)
+    start_teamfight = models.IntegerField(blank=True, null=True)
+    end_teamfight = models.IntegerField(blank=True, null=True)
+    last_death = models.IntegerField(blank=True, null=True)
+    deaths = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'teamfights'
+
+
+class TeamfightsPlayers(models.Model):
+    teamfight = models.ForeignKey(Teamfights, models.DO_NOTHING, blank=True, null=True)
+    match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True)
+    buyback = models.IntegerField(blank=True, null=True)
+    damage = models.IntegerField(blank=True, null=True)
+    deaths = models.IntegerField(blank=True, null=True)
+    gold_delta = models.IntegerField(blank=True, null=True)
+    xp_start = models.IntegerField(blank=True, null=True)
+    xp_end = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'teamfights_players'
