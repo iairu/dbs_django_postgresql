@@ -200,6 +200,44 @@ GROUP BY hero_id, h.localized_name
 ORDER BY MAX(match_heroid_sequence) DESC, id DESC;
 ```
 
+### Zadanie 4
+
+**Časť 1:**
+
+Modely `myapp.models` vygenerované pomocou `inspectdb`, prečistené a funkčnosť skontrolovaná.
+
+Súčasťou bolo sprevádzkovanie DB routeru a čistenie podľa komentárov v hlavičke `myapp.models`.
+
+**Časť 2:**
+
+Použité bolo Django ORM, i keď retrospektívne SQL Alchemy sa mi pozdáva o dosť viac.
+
+Implementované:
+
+> /v2/patches
+
+1x `patches` ORM query, 1x `matches` ORM query, následne spracovanie na strane web servera
+
+> /v2/players/<player_id>/game_exp
+
+1x `matches_players_details` ORM query s filter a select_related, následne spracovanie na strane web servera
+
+> /v2/players/<player_id>/game_objectives
+
+1x `matches_players_details` ORM query s filter a select_related, následne Nx `game_objectives` ORM query (viem že to je dosť low-quality, pokúsil som sa o chained filter, aby stačila jedna query, ale ten zjavne nefunguje ako by som chcel), následne spracovanie na strane web servera
+
+> /v2/players/<player_id>/abilities
+
+1x `matches_players_details` ORM query s filter a select_related, následne Nx `ability_upgrades` ORM query (viem že to je dosť low-quality, pokúsil som sa o chained filter, aby stačila jedna query, ale ten zjavne nefunguje ako by som chcel), následne spracovanie na strane web servera
+
+> /v3/...
+
+nevypracované
+
+**Časť 3:**
+
+nevypracované
+
 ## Sprevádzkovanie
 
 1. jednorázovo: `python -m venv venv` vytvorí virtuálny environment

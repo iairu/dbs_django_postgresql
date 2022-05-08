@@ -1,11 +1,9 @@
 from django.http import HttpResponse
 
 from myapp.models import AbilityUpgrades, GameObjectives, MatchesPlayersDetails, Patches, Matches
-from myapp.orm import datetime_unix
+from myapp.helpers import datetime_unix
 from myapp.raw import sql_query_all, sql_query_one, aggregate, constrained_max, rename_keys # priama SQL podpora
 
-import datetime
-import time
 import simplejson as json
 
 # Create your views here.
@@ -29,9 +27,6 @@ def index(request):
             <a href=\"/v4/players/14944/game_exp/\">/v4/players/14944/game_exp/</a><br>
             <a href=\"/v4/players/14944/game_objectives/\">/v4/players/14944/game_objectives/</a><br>
             <a href=\"/v4/players/14944/abilities/\">/v4/players/14944/abilities/</a><br>
-            <a href=\"/v4/matches/21421/top_purchases/\">/v4/matches/21421/top_purchases/</a><br>
-            <a href=\"/v4/abilities/5004/usage/\">/v4/abilities/5004/usage/</a><br>
-            <a href=\"/v4/statistics/tower_kills/\">/v4/statistics/tower_kills/</a><br>
         </nav>
         <h2>Relevant stuff</h2>
         <nav>

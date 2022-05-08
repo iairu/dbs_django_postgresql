@@ -1,5 +1,6 @@
 # Pouzity prikaz: python manage.py inspectdb --database readonly > models.py
 # Nasledne skontrolovane priradenie id ako primary_key pre kazdy model
+# Pri duplicitnych foreign_key pridane related_name rovne db_column (vyriesi problem s integritou)
 # ForeignKey on_delete neriesene lebo ORM bude len pre SELECT (read only)
 from django.db import models
 
@@ -25,16 +26,16 @@ class AbilityUpgrades(models.Model):
         db_table = 'ability_upgrades'
 
 
-# class Chats(models.Model):
-#     id = models.IntegerField(primary_key=True)
-#     match_player_detail = models.ForeignKey('MatchesPlayersDetails', models.DO_NOTHING, blank=True, null=True)
-#     message = models.TextField(blank=True, null=True)
-#     time = models.IntegerField(blank=True, null=True)
-#     nick = models.TextField(blank=True, null=True)
+class Chats(models.Model):
+    id = models.IntegerField(primary_key=True)
+    match_player_detail = models.ForeignKey('MatchesPlayersDetails', models.DO_NOTHING, blank=True, null=True)
+    message = models.TextField(blank=True, null=True)
+    time = models.IntegerField(blank=True, null=True)
+    nick = models.TextField(blank=True, null=True)
 
-#     class Meta:
-#         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
-#         db_table = 'chats'
+    class Meta:
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
+        db_table = 'chats'
 
 
 class ClusterRegions(models.Model):
@@ -167,104 +168,104 @@ class Patches(models.Model):
         db_table = 'patches'
 
 
-# class PlayerActions(models.Model):
-#     id = models.IntegerField(primary_key=True)
-#     unit_order_none = models.IntegerField(blank=True, null=True)
-#     unit_order_move_to_position = models.IntegerField(blank=True, null=True)
-#     unit_order_move_to_target = models.IntegerField(blank=True, null=True)
-#     unit_order_attack_move = models.IntegerField(blank=True, null=True)
-#     unit_order_attack_target = models.IntegerField(blank=True, null=True)
-#     unit_order_cast_position = models.IntegerField(blank=True, null=True)
-#     unit_order_cast_target = models.IntegerField(blank=True, null=True)
-#     unit_order_cast_target_tree = models.IntegerField(blank=True, null=True)
-#     unit_order_cast_no_target = models.IntegerField(blank=True, null=True)
-#     unit_order_cast_toggle = models.IntegerField(blank=True, null=True)
-#     unit_order_hold_position = models.IntegerField(blank=True, null=True)
-#     unit_order_train_ability = models.IntegerField(blank=True, null=True)
-#     unit_order_drop_item = models.IntegerField(blank=True, null=True)
-#     unit_order_give_item = models.IntegerField(blank=True, null=True)
-#     unit_order_pickup_item = models.IntegerField(blank=True, null=True)
-#     unit_order_pickup_rune = models.IntegerField(blank=True, null=True)
-#     unit_order_purchase_item = models.IntegerField(blank=True, null=True)
-#     unit_order_sell_item = models.IntegerField(blank=True, null=True)
-#     unit_order_disassemble_item = models.IntegerField(blank=True, null=True)
-#     unit_order_move_item = models.IntegerField(blank=True, null=True)
-#     unit_order_cast_toggle_auto = models.IntegerField(blank=True, null=True)
-#     unit_order_stop = models.IntegerField(blank=True, null=True)
-#     unit_order_buyback = models.IntegerField(blank=True, null=True)
-#     unit_order_glyph = models.IntegerField(blank=True, null=True)
-#     unit_order_eject_item_from_stash = models.IntegerField(blank=True, null=True)
-#     unit_order_cast_rune = models.IntegerField(blank=True, null=True)
-#     unit_order_ping_ability = models.IntegerField(blank=True, null=True)
-#     unit_order_move_to_direction = models.IntegerField(blank=True, null=True)
-#     match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True)
+class PlayerActions(models.Model):
+    id = models.IntegerField(primary_key=True)
+    unit_order_none = models.IntegerField(blank=True, null=True)
+    unit_order_move_to_position = models.IntegerField(blank=True, null=True)
+    unit_order_move_to_target = models.IntegerField(blank=True, null=True)
+    unit_order_attack_move = models.IntegerField(blank=True, null=True)
+    unit_order_attack_target = models.IntegerField(blank=True, null=True)
+    unit_order_cast_position = models.IntegerField(blank=True, null=True)
+    unit_order_cast_target = models.IntegerField(blank=True, null=True)
+    unit_order_cast_target_tree = models.IntegerField(blank=True, null=True)
+    unit_order_cast_no_target = models.IntegerField(blank=True, null=True)
+    unit_order_cast_toggle = models.IntegerField(blank=True, null=True)
+    unit_order_hold_position = models.IntegerField(blank=True, null=True)
+    unit_order_train_ability = models.IntegerField(blank=True, null=True)
+    unit_order_drop_item = models.IntegerField(blank=True, null=True)
+    unit_order_give_item = models.IntegerField(blank=True, null=True)
+    unit_order_pickup_item = models.IntegerField(blank=True, null=True)
+    unit_order_pickup_rune = models.IntegerField(blank=True, null=True)
+    unit_order_purchase_item = models.IntegerField(blank=True, null=True)
+    unit_order_sell_item = models.IntegerField(blank=True, null=True)
+    unit_order_disassemble_item = models.IntegerField(blank=True, null=True)
+    unit_order_move_item = models.IntegerField(blank=True, null=True)
+    unit_order_cast_toggle_auto = models.IntegerField(blank=True, null=True)
+    unit_order_stop = models.IntegerField(blank=True, null=True)
+    unit_order_buyback = models.IntegerField(blank=True, null=True)
+    unit_order_glyph = models.IntegerField(blank=True, null=True)
+    unit_order_eject_item_from_stash = models.IntegerField(blank=True, null=True)
+    unit_order_cast_rune = models.IntegerField(blank=True, null=True)
+    unit_order_ping_ability = models.IntegerField(blank=True, null=True)
+    unit_order_move_to_direction = models.IntegerField(blank=True, null=True)
+    match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True)
 
-#     class Meta:
-#         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
-#         db_table = 'player_actions'
-
-
-# class PlayerRatings(models.Model):
-#     id = models.IntegerField(primary_key=True)
-#     player = models.ForeignKey('Players', models.DO_NOTHING, blank=True, null=True)
-#     total_wins = models.IntegerField(blank=True, null=True)
-#     total_matches = models.IntegerField(blank=True, null=True)
-#     trueskill_mu = models.DecimalField(max_digits=65535, decimal_places=65535, blank=True, null=True)
-#     trueskill_sigma = models.DecimalField(max_digits=65535, decimal_places=65535, blank=True, null=True)
-
-#     class Meta:
-#         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
-#         db_table = 'player_ratings'
+    class Meta:
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
+        db_table = 'player_actions'
 
 
-# class PlayerTimes(models.Model):
-#     id = models.IntegerField(primary_key=True)
-#     match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True)
-#     time = models.IntegerField(blank=True, null=True)
-#     gold = models.IntegerField(blank=True, null=True)
-#     lh = models.IntegerField(blank=True, null=True)
-#     xp = models.IntegerField(blank=True, null=True)
+class PlayerRatings(models.Model):
+    id = models.IntegerField(primary_key=True)
+    player = models.ForeignKey('Players', models.DO_NOTHING, blank=True, null=True)
+    total_wins = models.IntegerField(blank=True, null=True)
+    total_matches = models.IntegerField(blank=True, null=True)
+    trueskill_mu = models.DecimalField(max_digits=65535, decimal_places=65535, blank=True, null=True)
+    trueskill_sigma = models.DecimalField(max_digits=65535, decimal_places=65535, blank=True, null=True)
 
-#     class Meta:
-#         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
-#         db_table = 'player_times'
-
-
-# class PurchaseLogs(models.Model):
-#     id = models.IntegerField(primary_key=True)
-#     match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True)
-#     item = models.ForeignKey(Items, models.DO_NOTHING, blank=True, null=True)
-#     time = models.IntegerField(blank=True, null=True)
-
-#     class Meta:
-#         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
-#         db_table = 'purchase_logs'
+    class Meta:
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
+        db_table = 'player_ratings'
 
 
-# class Teamfights(models.Model):
-#     id = models.IntegerField(primary_key=True)
-#     match = models.ForeignKey(Matches, models.DO_NOTHING, blank=True, null=True)
-#     start_teamfight = models.IntegerField(blank=True, null=True)
-#     end_teamfight = models.IntegerField(blank=True, null=True)
-#     last_death = models.IntegerField(blank=True, null=True)
-#     deaths = models.IntegerField(blank=True, null=True)
+class PlayerTimes(models.Model):
+    id = models.IntegerField(primary_key=True)
+    match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True)
+    time = models.IntegerField(blank=True, null=True)
+    gold = models.IntegerField(blank=True, null=True)
+    lh = models.IntegerField(blank=True, null=True)
+    xp = models.IntegerField(blank=True, null=True)
 
-#     class Meta:
-#         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
-#         db_table = 'teamfights'
+    class Meta:
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
+        db_table = 'player_times'
 
 
-# class TeamfightsPlayers(models.Model):
-#     id = models.IntegerField(primary_key=True)
-#     teamfight = models.ForeignKey(Teamfights, models.DO_NOTHING, blank=True, null=True)
-#     match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True)
-#     buyback = models.IntegerField(blank=True, null=True)
-#     damage = models.IntegerField(blank=True, null=True)
-#     deaths = models.IntegerField(blank=True, null=True)
-#     gold_delta = models.IntegerField(blank=True, null=True)
-#     xp_start = models.IntegerField(blank=True, null=True)
-#     xp_end = models.IntegerField(blank=True, null=True)
+class PurchaseLogs(models.Model):
+    id = models.IntegerField(primary_key=True)
+    match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True)
+    item = models.ForeignKey(Items, models.DO_NOTHING, blank=True, null=True)
+    time = models.IntegerField(blank=True, null=True)
 
-#     class Meta:
-#         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
-#         db_table = 'teamfights_players'
+    class Meta:
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
+        db_table = 'purchase_logs'
+
+
+class Teamfights(models.Model):
+    id = models.IntegerField(primary_key=True)
+    match = models.ForeignKey(Matches, models.DO_NOTHING, blank=True, null=True)
+    start_teamfight = models.IntegerField(blank=True, null=True)
+    end_teamfight = models.IntegerField(blank=True, null=True)
+    last_death = models.IntegerField(blank=True, null=True)
+    deaths = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
+        db_table = 'teamfights'
+
+
+class TeamfightsPlayers(models.Model):
+    id = models.IntegerField(primary_key=True)
+    teamfight = models.ForeignKey(Teamfights, models.DO_NOTHING, blank=True, null=True)
+    match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True)
+    buyback = models.IntegerField(blank=True, null=True)
+    damage = models.IntegerField(blank=True, null=True)
+    deaths = models.IntegerField(blank=True, null=True)
+    gold_delta = models.IntegerField(blank=True, null=True)
+    xp_start = models.IntegerField(blank=True, null=True)
+    xp_end = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
+        db_table = 'teamfights_players'
