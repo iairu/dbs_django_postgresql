@@ -81,24 +81,25 @@ from django.db import models
 #         db_table = 'items'
 
 
-# class Matches(models.Model):
-#     id = models.IntegerField(primary_key=True)
-#     cluster_region = models.ForeignKey(ClusterRegions, models.DO_NOTHING, blank=True, null=True)
-#     start_time = models.IntegerField(blank=True, null=True)
-#     duration = models.IntegerField(blank=True, null=True)
-#     tower_status_radiant = models.IntegerField(blank=True, null=True)
-#     tower_status_dire = models.IntegerField(blank=True, null=True)
-#     barracks_status_radiant = models.IntegerField(blank=True, null=True)
-#     barracks_status_dire = models.IntegerField(blank=True, null=True)
-#     first_blood_time = models.IntegerField(blank=True, null=True)
-#     game_mode = models.IntegerField(blank=True, null=True)
-#     radiant_win = models.BooleanField(blank=True, null=True)
-#     negative_votes = models.IntegerField(blank=True, null=True)
-#     positive_votes = models.IntegerField(blank=True, null=True)
+class Matches(models.Model):
+    id = models.IntegerField(primary_key=True)
+    # cluster_region = models.ForeignKey(ClusterRegions, models.DO_NOTHING, blank=True, null=True)
+    # cluster_region = models.IntegerField(blank=True, null=True)
+    start_time = models.IntegerField(blank=True, null=True)
+    duration = models.IntegerField(blank=True, null=True)
+    tower_status_radiant = models.IntegerField(blank=True, null=True)
+    tower_status_dire = models.IntegerField(blank=True, null=True)
+    barracks_status_radiant = models.IntegerField(blank=True, null=True)
+    barracks_status_dire = models.IntegerField(blank=True, null=True)
+    first_blood_time = models.IntegerField(blank=True, null=True)
+    game_mode = models.IntegerField(blank=True, null=True)
+    radiant_win = models.BooleanField(blank=True, null=True)
+    negative_votes = models.IntegerField(blank=True, null=True)
+    positive_votes = models.IntegerField(blank=True, null=True)
 
-#     class Meta:
-#         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
-#         db_table = 'matches'
+    class Meta:
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
+        db_table = 'matches'
 
 
 # class MatchesPlayersDetails(models.Model):

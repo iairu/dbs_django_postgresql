@@ -1,7 +1,11 @@
 from django.http import HttpResponse
 
-from myapp.models import Patches
+from myapp.models import Patches, Matches
+from myapp.orm import datetime_unix
 from myapp.raw import sql_query_all, sql_query_one, aggregate, constrained_max, rename_keys # priama SQL podpora
+
+import datetime
+import time
 import simplejson as json
 
 # Create your views here.
@@ -499,9 +503,50 @@ def v4_patches(request):
     #     }
     #   ]
     # }
-    data = {}
-    patches = Patches.objects.all()
-    for patch in patches:
-        data[patch.id] = patch.name
 
-    return HttpResponse(json.dumps(data), content_type="application/json; charset=utf-8", status=200)
+    try:
+        # original SQL:
+        # WITH my_patches AS
+        # (
+        #     SELECT name                                     as patch_version, 
+        #         EXTRACT(EPOCH FROM release_date)::integer  as patch_start_date, 
+        #     LEAD(EXTRACT(EPOCH FROM release_date)::integer, 1) OVER (ORDER BY name)      
+        #                                                     as patch_end_date
+        #     FROM patches
+        #     ORDER BY patch_version ASC
+        # )
+        # SELECT my_patches.*, 
+        # matches.id                                          as match_id, 
+        # ROUND(matches.duration::decimal / 60, 2)            as duration
+        # FROM my_patches 
+        # LEFT OUTER JOIN matches ON (matches.start_time >= my_patches.patch_start_date AND 
+        #                             matches.start_time <= COALESCE(my_patches.patch_end_date,
+        #                             EXTRACT(EPOCH FROM NOW())::integer));
+
+        # ORM
+        patches = []
+        _patches_ = Patches.objects.all().order_by("name")
+        _matches_ = Matches.objects.all()
+        _patches_len = len(_patches_)
+        for i, _patch_ in enumerate(_patches_):
+            patch = {}
+            patch["patch_version"] = _patch_.name
+            patch["patch_start_date"] = int(datetime_unix(_patch_.release_date))
+            patch["patch_end_date"] = None if (i >= _patches_len - 1) else int(datetime_unix(_patches_[i + 1].release_date))
+            matches = []
+            for j, _match_ in enumerate(_matches_):
+                match_start_time = int(_match_.start_time)
+                if (match_start_time >= patch["patch_start_date"] and (patch["patch_end_date"] == None or match_start_time <= patch["patch_end_date"])):
+                    match = {}
+                    match["match_id"] = _match_.id
+                    match["duration"] = round(_match_.duration / 60, 2)
+                    matches.append(match)
+            patch["matches"] = matches
+            patches.append(patch)
+
+        data = {"patches": patches}
+
+        return HttpResponse(json.dumps(data), content_type="application/json; charset=utf-8", status=200)
+    except BaseException as err:
+        # 500 "error" catch all
+        return HttpResponse(json.dumps({"error": "internal error"}), content_type="application/json; charset=utf-8", status=500) # internal error
