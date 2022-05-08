@@ -1,6 +1,7 @@
 from django.http import HttpResponse
 
-from .raw import sql_query_all, sql_query_one, aggregate, constrained_max, rename_keys # priama SQL podpora
+from myapp.models import Patches
+from myapp.raw import sql_query_all, sql_query_one, aggregate, constrained_max, rename_keys # priama SQL podpora
 import simplejson as json
 
 # Create your views here.
@@ -19,6 +20,14 @@ def index(request):
             <a href=\"/v3/matches/21421/top_purchases/\">/v3/matches/21421/top_purchases/</a><br>
             <a href=\"/v3/abilities/5004/usage/\">/v3/abilities/5004/usage/</a><br>
             <a href=\"/v3/statistics/tower_kills/\">/v3/statistics/tower_kills/</a><br>
+            <br>
+            <a href=\"/v4/patches/\">/v4/patches/</a><br>
+            <a href=\"/v4/players/14944/game_exp/\">/v4/players/14944/game_exp/</a><br>
+            <a href=\"/v4/players/14944/game_objectives/\">/v4/players/14944/game_objectives/</a><br>
+            <a href=\"/v4/players/14944/abilities/\">/v4/players/14944/abilities/</a><br>
+            <a href=\"/v4/matches/21421/top_purchases/\">/v4/matches/21421/top_purchases/</a><br>
+            <a href=\"/v4/abilities/5004/usage/\">/v4/abilities/5004/usage/</a><br>
+            <a href=\"/v4/statistics/tower_kills/\">/v4/statistics/tower_kills/</a><br>
         </nav>
         <h2>Relevant stuff</h2>
         <nav>
@@ -473,3 +482,26 @@ def v3_statistics_tower_kills(request):
     except BaseException as err:
         # 400 "error" ak napr. player_id na vstupe obsahuje neciselne znaky + 500 catch all
         return HttpResponse(json.dumps({"error": "internal error"}), content_type="application/json; charset=utf-8", status=500) # internal error
+
+def v4_patches(request):
+    # {
+    #   "patches": [
+    #     {
+    #       "patch_version": "6.71",
+    #       "patch_start_date": 1446681600,
+    #       "patch_end_date": 1446768000,
+    #       "matches": [
+    #         {
+    #           "match_id": 0,
+    #           "duration": 39.58
+    #         }
+    #       ]
+    #     }
+    #   ]
+    # }
+    data = {}
+    patches = Patches.objects.all()
+    for patch in patches:
+        data[patch.id] = patch.name
+
+    return HttpResponse(json.dumps(data), content_type="application/json; charset=utf-8", status=200)
