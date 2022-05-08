@@ -46,20 +46,20 @@ class ClusterRegions(models.Model):
         db_table = 'cluster_regions'
 
 
-# class GameObjectives(models.Model):
-#     id = models.IntegerField(primary_key=True)
-#     match_player_detail_id_1 = models.ForeignKey('MatchesPlayersDetails', models.DO_NOTHING, db_column='match_player_detail_id_1', blank=True, null=True)
-#     match_player_detail_id_2 = models.ForeignKey('MatchesPlayersDetails', models.DO_NOTHING, db_column='match_player_detail_id_2', blank=True, null=True)
-#     key = models.IntegerField(blank=True, null=True)
-#     subtype = models.TextField(blank=True, null=True)
-#     team = models.IntegerField(blank=True, null=True)
-#     time = models.IntegerField(blank=True, null=True)
-#     value = models.IntegerField(blank=True, null=True)
-#     slot = models.IntegerField(blank=True, null=True)
+class GameObjectives(models.Model):
+    id = models.IntegerField(primary_key=True)
+    match_player_detail_id_1 = models.ForeignKey('MatchesPlayersDetails', models.DO_NOTHING, db_column='match_player_detail_id_1', related_name='match_player_detail_id_1', blank=True, null=True)
+    match_player_detail_id_2 = models.ForeignKey('MatchesPlayersDetails', models.DO_NOTHING, db_column='match_player_detail_id_2', related_name='match_player_detail_id_2', blank=True, null=True)
+    key = models.IntegerField(blank=True, null=True)
+    subtype = models.TextField(blank=True, null=True)
+    team = models.IntegerField(blank=True, null=True)
+    time = models.IntegerField(blank=True, null=True)
+    value = models.IntegerField(blank=True, null=True)
+    slot = models.IntegerField(blank=True, null=True)
 
-#     class Meta:
-#         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
-#         db_table = 'game_objectives'
+    class Meta:
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
+        db_table = 'game_objectives'
 
 
 class Heroes(models.Model):
