@@ -13,4 +13,5 @@ urlpatterns = [
     path('v3/abilities/<ability_id>/usage/', views.v3_abilities_usage),
     path('v3/statistics/tower_kills/', views.v3_statistics_tower_kills),
     path('v4/patches/', views.v4_patches),
+    path('v4/players/<player_id>/game_exp/', views.v4_players_game_exp),
 ]

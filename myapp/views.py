@@ -1,6 +1,6 @@
 from django.http import HttpResponse
 
-from myapp.models import Patches, Matches
+from myapp.models import MatchesPlayersDetails, Patches, Matches
 from myapp.orm import datetime_unix
 from myapp.raw import sql_query_all, sql_query_one, aggregate, constrained_max, rename_keys # priama SQL podpora
 
@@ -550,3 +550,82 @@ def v4_patches(request):
     except BaseException as err:
         # 500 "error" catch all
         return HttpResponse(json.dumps({"error": "internal error"}), content_type="application/json; charset=utf-8", status=500) # internal error
+
+def v4_players_game_exp(request, player_id):
+    # {
+    #   "id": 14944,
+    #   "player_nick": "kakao`",
+    #   "matches": [
+    #     {
+    #       "match_id": 30221,
+    #       "hero_localized_name": "Dark Seer",
+    #       "match_duration_minutes": 52.93,
+    #       "experiences_gained": 25844,
+    #       "level_gained": 22,
+    #       "winner": true
+    #     }
+    #   ]
+    # }
+    try:
+        # zabezpecenie vstupu od pouzivatela pred SQL: povolene len ciselne znaky
+        secure_player_id = int(player_id)
+
+        # original SQL:
+        # SELECT players.id                             as id, 
+        # COALESCE(players.nick, 'unknown')             as player_nick, 
+        # matches.id                                    as match_id,
+        # heroes.localized_name                         as hero_localized_name, 
+        # ROUND(matches.duration::decimal / 60, 2)      as match_duration_minutes, 
+        # (COALESCE(mpd.xp_hero,0) + 
+        # COALESCE(mpd.xp_creep,0) + 
+        # COALESCE(mpd.xp_other,0) + 
+        # COALESCE(mpd.xp_roshan,0))                   as experiences_gained, 
+        # mpd.level                                     as level_gained,
+        # CASE WHEN     matches.radiant_win AND mpd.player_slot >= 0   AND mpd.player_slot <= 4   THEN true
+        #     WHEN not matches.radiant_win AND mpd.player_slot >= 128 AND mpd.player_slot <= 132 THEN true
+        #     ELSE false
+        # END                                           as winner
+        # FROM matches_players_details as mpd
+        # INNER JOIN heroes ON (mpd.hero_id = heroes.id) 
+        # INNER JOIN matches ON (mpd.match_id = matches.id) 
+        # INNER JOIN players ON (mpd.player_id = players.id)
+        # WHERE player_id = """ + str(secure_player_id) + """ 
+        # ORDER BY matches.id ASC;
+
+        # ORM
+        matches = []
+        _player_ = None
+        _mpds_ = MatchesPlayersDetails.objects.filter(player_id=secure_player_id).order_by("match_id").select_related()
+        for _mpd_ in _mpds_:
+            _match_ = _mpd_.match
+            if (_player_ == None): _player_ = _mpd_.player
+            _hero_ = _mpd_.hero
+            match = {}
+            match["match_id"] = _match_.id
+            match["hero_localized_name"] = _hero_.localized_name
+            match["match_duration_minutes"] = round(_match_.duration / 60, 2)
+            match["experiences_gained"] = int(0 if (_mpd_.xp_hero == None) else _mpd_.xp_hero) + \
+                                          int(0 if (_mpd_.xp_creep == None) else _mpd_.xp_creep) + \
+                                          int(0 if (_mpd_.xp_other == None) else _mpd_.xp_other) + \
+                                          int(0 if (_mpd_.xp_roshan == None) else _mpd_.xp_roshan)
+            match["level_gained"] = _mpd_.level
+            match["winner"] = True if ( (_match_.radiant_win and _mpd_.player_slot >= 0 and _mpd_.player_slot <= 4) or \
+                                        (not _match_.radiant_win and _mpd_.player_slot >= 128 and _mpd_.player_slot <= 132)) \
+                                        else False
+            matches.append(match)
+
+        data = {}
+        data["id"] = _player_.id
+        data["player_nick"] = "unknown" if (_player_.nick == None) else _player_.nick
+        data["matches"] = matches
+
+        # Vybratie prveho vysledku agregacie (v tomto pripade moze byt jedine 1 alebo ziadne kedze cely query sa tyka len 1 hraca) alebo zaznacenie neexistencie
+        # data = data[0] if len(data) else None
+        # 404 "error" ak ziadne data napr. nenajdene player_id, inac 200
+        return HttpResponse(json.dumps(data), content_type="application/json; charset=utf-8", status=200 if data else 404)
+    except BaseException as err:
+        # 400 "error" ak napr. player_id na vstupe obsahuje neciselne znaky + 500 catch all
+        if "invalid literal for int" in str(err):
+            return HttpResponse(json.dumps({"error": "invalid player_id"}), content_type="application/json; charset=utf-8", status=400) # bad request
+        else:
+            return HttpResponse(json.dumps({"error": "internal error"}), content_type="application/json; charset=utf-8", status=500) # internal error

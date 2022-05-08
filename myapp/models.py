@@ -37,13 +37,13 @@ from django.db import models
 #         db_table = 'chats'
 
 
-# class ClusterRegions(models.Model):
-#     id = models.IntegerField(primary_key=True)
-#     name = models.TextField(blank=True, null=True)
+class ClusterRegions(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.TextField(blank=True, null=True)
 
-#     class Meta:
-#         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
-#         db_table = 'cluster_regions'
+    class Meta:
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
+        db_table = 'cluster_regions'
 
 
 # class GameObjectives(models.Model):
@@ -62,29 +62,37 @@ from django.db import models
 #         db_table = 'game_objectives'
 
 
-# class Heroes(models.Model):
-#     id = models.IntegerField(primary_key=True)
-#     name = models.TextField(blank=True, null=True)
-#     localized_name = models.TextField(blank=True, null=True)
+class Heroes(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.TextField(blank=True, null=True)
+    localized_name = models.TextField(blank=True, null=True)
 
-#     class Meta:
-#         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
-#         db_table = 'heroes'
+    class Meta:
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
+        db_table = 'heroes'
 
 
-# class Items(models.Model):
-#     id = models.IntegerField(primary_key=True)
-#     name = models.TextField(blank=True, null=True)
+class Items(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.TextField(blank=True, null=True)
 
-#     class Meta:
-#         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
-#         db_table = 'items'
+    class Meta:
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
+        db_table = 'items'
+
+class Players(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.TextField(blank=True, null=True)
+    nick = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
+        db_table = 'players'
 
 
 class Matches(models.Model):
     id = models.IntegerField(primary_key=True)
-    # cluster_region = models.ForeignKey(ClusterRegions, models.DO_NOTHING, blank=True, null=True)
-    # cluster_region = models.IntegerField(blank=True, null=True)
+    cluster_region = models.ForeignKey(ClusterRegions, models.DO_NOTHING, blank=True, null=True)
     start_time = models.IntegerField(blank=True, null=True)
     duration = models.IntegerField(blank=True, null=True)
     tower_status_radiant = models.IntegerField(blank=True, null=True)
@@ -102,51 +110,51 @@ class Matches(models.Model):
         db_table = 'matches'
 
 
-# class MatchesPlayersDetails(models.Model):
-#     id = models.IntegerField(primary_key=True)
-#     match = models.ForeignKey(Matches, models.DO_NOTHING, blank=True, null=True)
-#     player = models.ForeignKey('Players', models.DO_NOTHING, blank=True, null=True)
-#     hero = models.ForeignKey(Heroes, models.DO_NOTHING, blank=True, null=True)
-#     player_slot = models.IntegerField(blank=True, null=True)
-#     gold = models.IntegerField(blank=True, null=True)
-#     gold_spent = models.IntegerField(blank=True, null=True)
-#     gold_per_min = models.IntegerField(blank=True, null=True)
-#     xp_per_min = models.IntegerField(blank=True, null=True)
-#     kills = models.IntegerField(blank=True, null=True)
-#     deaths = models.IntegerField(blank=True, null=True)
-#     assists = models.IntegerField(blank=True, null=True)
-#     denies = models.IntegerField(blank=True, null=True)
-#     last_hits = models.IntegerField(blank=True, null=True)
-#     stuns = models.IntegerField(blank=True, null=True)
-#     hero_damage = models.IntegerField(blank=True, null=True)
-#     hero_healing = models.IntegerField(blank=True, null=True)
-#     tower_damage = models.IntegerField(blank=True, null=True)
-#     item_id_1 = models.ForeignKey(Items, models.DO_NOTHING, db_column='item_id_1', blank=True, null=True)
-#     item_id_2 = models.ForeignKey(Items, models.DO_NOTHING, db_column='item_id_2', blank=True, null=True)
-#     item_id_3 = models.ForeignKey(Items, models.DO_NOTHING, db_column='item_id_3', blank=True, null=True)
-#     item_id_4 = models.ForeignKey(Items, models.DO_NOTHING, db_column='item_id_4', blank=True, null=True)
-#     item_id_5 = models.ForeignKey(Items, models.DO_NOTHING, db_column='item_id_5', blank=True, null=True)
-#     item_id_6 = models.ForeignKey(Items, models.DO_NOTHING, db_column='item_id_6', blank=True, null=True)
-#     level = models.IntegerField(blank=True, null=True)
-#     leaver_status = models.IntegerField(blank=True, null=True)
-#     xp_hero = models.IntegerField(blank=True, null=True)
-#     xp_creep = models.IntegerField(blank=True, null=True)
-#     xp_roshan = models.IntegerField(blank=True, null=True)
-#     xp_other = models.IntegerField(blank=True, null=True)
-#     gold_other = models.IntegerField(blank=True, null=True)
-#     gold_death = models.IntegerField(blank=True, null=True)
-#     gold_buyback = models.IntegerField(blank=True, null=True)
-#     gold_abandon = models.IntegerField(blank=True, null=True)
-#     gold_sell = models.IntegerField(blank=True, null=True)
-#     gold_destroying_structure = models.IntegerField(blank=True, null=True)
-#     gold_killing_heroes = models.IntegerField(blank=True, null=True)
-#     gold_killing_creeps = models.IntegerField(blank=True, null=True)
-#     gold_killing_roshan = models.IntegerField(blank=True, null=True)
-#     gold_killing_couriers = models.IntegerField(blank=True, null=True)
+class MatchesPlayersDetails(models.Model):
+    id = models.IntegerField(primary_key=True)
+    match = models.ForeignKey(Matches, models.DO_NOTHING, blank=True, null=True)
+    player = models.ForeignKey(Players, models.DO_NOTHING, blank=True, null=True)
+    hero = models.ForeignKey(Heroes, models.DO_NOTHING, blank=True, null=True)
+    player_slot = models.IntegerField(blank=True, null=True)
+    gold = models.IntegerField(blank=True, null=True)
+    gold_spent = models.IntegerField(blank=True, null=True)
+    gold_per_min = models.IntegerField(blank=True, null=True)
+    xp_per_min = models.IntegerField(blank=True, null=True)
+    kills = models.IntegerField(blank=True, null=True)
+    deaths = models.IntegerField(blank=True, null=True)
+    assists = models.IntegerField(blank=True, null=True)
+    denies = models.IntegerField(blank=True, null=True)
+    last_hits = models.IntegerField(blank=True, null=True)
+    stuns = models.IntegerField(blank=True, null=True)
+    hero_damage = models.IntegerField(blank=True, null=True)
+    hero_healing = models.IntegerField(blank=True, null=True)
+    tower_damage = models.IntegerField(blank=True, null=True)
+    item_id_1 = models.ForeignKey(Items, models.DO_NOTHING, related_name='item_id_1', db_column='item_id_1', blank=True, null=True)
+    item_id_2 = models.ForeignKey(Items, models.DO_NOTHING, related_name='item_id_2', db_column='item_id_2', blank=True, null=True)
+    item_id_3 = models.ForeignKey(Items, models.DO_NOTHING, related_name='item_id_3', db_column='item_id_3', blank=True, null=True)
+    item_id_4 = models.ForeignKey(Items, models.DO_NOTHING, related_name='item_id_4', db_column='item_id_4', blank=True, null=True)
+    item_id_5 = models.ForeignKey(Items, models.DO_NOTHING, related_name='item_id_5', db_column='item_id_5', blank=True, null=True)
+    item_id_6 = models.ForeignKey(Items, models.DO_NOTHING, related_name='item_id_6', db_column='item_id_6', blank=True, null=True)
+    level = models.IntegerField(blank=True, null=True)
+    leaver_status = models.IntegerField(blank=True, null=True)
+    xp_hero = models.IntegerField(blank=True, null=True)
+    xp_creep = models.IntegerField(blank=True, null=True)
+    xp_roshan = models.IntegerField(blank=True, null=True)
+    xp_other = models.IntegerField(blank=True, null=True)
+    gold_other = models.IntegerField(blank=True, null=True)
+    gold_death = models.IntegerField(blank=True, null=True)
+    gold_buyback = models.IntegerField(blank=True, null=True)
+    gold_abandon = models.IntegerField(blank=True, null=True)
+    gold_sell = models.IntegerField(blank=True, null=True)
+    gold_destroying_structure = models.IntegerField(blank=True, null=True)
+    gold_killing_heroes = models.IntegerField(blank=True, null=True)
+    gold_killing_creeps = models.IntegerField(blank=True, null=True)
+    gold_killing_roshan = models.IntegerField(blank=True, null=True)
+    gold_killing_couriers = models.IntegerField(blank=True, null=True)
 
-#     class Meta:
-#         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
-#         db_table = 'matches_players_details'
+    class Meta:
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
+        db_table = 'matches_players_details'
 
 
 class Patches(models.Model):
@@ -220,16 +228,6 @@ class Patches(models.Model):
 #     class Meta:
 #         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
 #         db_table = 'player_times'
-
-
-# class Players(models.Model):
-#     id = models.IntegerField(primary_key=True)
-#     name = models.TextField(blank=True, null=True)
-#     nick = models.TextField(blank=True, null=True)
-
-#     class Meta:
-#         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
-#         db_table = 'players'
 
 
 # class PurchaseLogs(models.Model):
