@@ -36,6 +36,7 @@ ALLOWED_HOSTS = ["127.0.0.1"] if DEBUG else [
 # Application definition
 
 INSTALLED_APPS = [
+    'myapp',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -77,6 +78,8 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
+
+DATABASE_ROUTERS = ('myapp.dbrouters.MyDBRouter',)
 
 DATABASES = {
     'default': {
