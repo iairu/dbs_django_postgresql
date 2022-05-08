@@ -4,25 +4,25 @@
 from django.db import models
 
 
-# class Abilities(models.Model):
-#     id = models.IntegerField(primary_key=True)
-#     name = models.TextField(blank=True, null=True)
+class Abilities(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.TextField(blank=True, null=True)
 
-#     class Meta:
-#         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
-#         db_table = 'abilities'
+    class Meta:
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
+        db_table = 'abilities'
 
 
-# class AbilityUpgrades(models.Model):
-#     id = models.IntegerField(primary_key=True)
-#     ability = models.ForeignKey(Abilities, models.DO_NOTHING, blank=True, null=True)
-#     match_player_detail = models.ForeignKey('MatchesPlayersDetails', models.DO_NOTHING, blank=True, null=True)
-#     level = models.IntegerField(blank=True, null=True)
-#     time = models.IntegerField(blank=True, null=True)
+class AbilityUpgrades(models.Model):
+    id = models.IntegerField(primary_key=True)
+    ability = models.ForeignKey(Abilities, models.DO_NOTHING, blank=True, null=True)
+    match_player_detail = models.ForeignKey('MatchesPlayersDetails', models.DO_NOTHING, blank=True, null=True)
+    level = models.IntegerField(blank=True, null=True)
+    time = models.IntegerField(blank=True, null=True)
 
-#     class Meta:
-#         managed = False # Remove if you wish to allow Django to create, modify, and delete the table
-#         db_table = 'ability_upgrades'
+    class Meta:
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
+        db_table = 'ability_upgrades'
 
 
 # class Chats(models.Model):

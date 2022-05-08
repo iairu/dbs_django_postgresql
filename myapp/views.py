@@ -1,6 +1,6 @@
 from django.http import HttpResponse
 
-from myapp.models import GameObjectives, MatchesPlayersDetails, Patches, Matches
+from myapp.models import AbilityUpgrades, GameObjectives, MatchesPlayersDetails, Patches, Matches
 from myapp.orm import datetime_unix
 from myapp.raw import sql_query_all, sql_query_one, aggregate, constrained_max, rename_keys # priama SQL podpora
 
@@ -714,3 +714,91 @@ def v4_players_game_objectives(request, player_id):
         else:
             return HttpResponse(json.dumps({"error": "internal error"}), content_type="application/json; charset=utf-8", status=500) # internal error
 
+def v4_players_abilities(request, player_id):
+    # {
+    #   "id": 14944,
+    #   "player_nick": "kakao`",
+    #   "matches": [
+    #     {
+    #       "match_id": 2980,
+    #       "hero_localized_name": "Slardar",
+    #       "abilities": [
+    #         {
+    #           "ability_name": "slardar_slithereen_crush",
+    #           "count": 1,
+    #           "upgrade_level": 7
+    #         }
+    #       ]
+    #     }
+    #   ]
+    # }
+    try: 
+        # zabezpecenie vstupu od pouzivatela pred SQL: povolene len ciselne znaky
+        secure_player_id = int(player_id)
+
+        # original SQL:
+        # SELECT players.id                      as id, 
+        # COALESCE(players.nick,'unknown')       as player_nick, 
+        # matches.id                             as match_id, 
+        # heroes.localized_name                  as hero_localized_name, 
+        # ab.name                                as ability_name, 
+        # COUNT(ab.name)                         as count,
+        # MAX(au.level)                          as upgrade_level 
+        # FROM matches_players_details as mpd
+        # INNER JOIN heroes ON (mpd.hero_id = heroes.id) 
+        # INNER JOIN matches ON (mpd.match_id = matches.id) 
+        # INNER JOIN players ON (mpd.player_id = players.id) 
+        # INNER JOIN ability_upgrades as au ON (mpd.id = au.match_player_detail_id)
+        # INNER JOIN abilities as ab ON (au.ability_id = ab.id)
+        # WHERE player_id = """ + str(secure_player_id) + """ 
+        # GROUP BY players.id, player_nick, matches.id, heroes.localized_name, ab.name;
+
+        # ORM
+
+        # ORM
+        matches = []
+        _player_ = None
+        _mpds_ = MatchesPlayersDetails.objects.filter(player_id=secure_player_id).order_by("match_id").select_related()
+        
+
+        for _mpd_ in _mpds_:
+            _match_ = _mpd_.match
+            if (_player_ == None): _player_ = _mpd_.player
+            _hero_ = _mpd_.hero
+            match = {}
+            match["match_id"] = _match_.id
+            match["hero_localized_name"] = _hero_.localized_name
+            abilities = []
+            ability = {}
+            _pab_name = None
+            _aus_ = AbilityUpgrades.objects.filter(match_player_detail_id=_mpd_.id).order_by("ability__name", "level").select_related()
+            for _au_ in _aus_:
+                _ab_ = _au_.ability
+
+                if (_pab_name != _ab_.name):
+                    if (_pab_name != None): abilities.append(ability)
+                    ability = {} # new ability, appended previous
+                    ability["ability_name"] = _ab_.name
+                    ability["count"] = 1
+                    ability["upgrade_level"] = _au_.level
+                else: # update existing ability's level to higher (ordered asc)
+                    ability["count"] += 1
+                    ability["upgrade_level"] = _au_.level
+                _pab_name = _ab_.name
+            if (_pab_name != None): abilities.append(ability) # append last ability
+            match["abilities"] = abilities
+            matches.append(match)
+
+        data = {}
+        data["id"] = _player_.id
+        data["player_nick"] = "unknown" if (_player_.nick == None) else _player_.nick
+        data["matches"] = matches
+
+        # 404 "error" ak ziadne data napr. nenajdene player_id, inac 200
+        return HttpResponse(json.dumps(data), content_type="application/json; charset=utf-8", status=200 if data else 404)
+    except BaseException as err:
+        # 400 "error" ak napr. player_id na vstupe obsahuje neciselne znaky + 500 catch all
+        if "invalid literal for int" in str(err):
+            return HttpResponse(json.dumps({"error": "invalid player_id"}), content_type="application/json; charset=utf-8", status=400) # bad request
+        else:
+            return HttpResponse(json.dumps({"error": "internal error"}), content_type="application/json; charset=utf-8", status=500) # internal error
