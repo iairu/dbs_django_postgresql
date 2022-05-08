@@ -1,12 +1,6 @@
 # Pouzity prikaz: python manage.py inspectdb --database readonly > models.py
-#
-# This is an auto-generated Django model module.
-# You'll have to do the following manually to clean this up:
-#   * Rearrange models' order
-#   * Make sure each model has one field with primary_key=True
-#   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
-#   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
-# Feel free to rename the models, but don't rename db_table values or field names.
+# Nasledne skontrolovane priradenie id ako primary_key pre kazdy model
+# ForeignKey on_delete neriesene lebo ORM bude len pre SELECT (read only)
 from django.db import models
 
 
@@ -15,49 +9,31 @@ class Abilities(models.Model):
     name = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'abilities'
 
 
 class AbilityUpgrades(models.Model):
+    id = models.IntegerField(primary_key=True)
     ability = models.ForeignKey(Abilities, models.DO_NOTHING, blank=True, null=True)
     match_player_detail = models.ForeignKey('MatchesPlayersDetails', models.DO_NOTHING, blank=True, null=True)
     level = models.IntegerField(blank=True, null=True)
     time = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'ability_upgrades'
-# Unable to inspect table 'alembic_version'
-# The error was: permission denied for table alembic_version
-# Unable to inspect table 'auth_group'
-# The error was: permission denied for table auth_group
-# Unable to inspect table 'auth_group_permissions'
-# The error was: permission denied for table auth_group_permissions
-# Unable to inspect table 'auth_groups'
-# The error was: permission denied for table auth_groups
-# Unable to inspect table 'auth_permission'
-# The error was: permission denied for table auth_permission
-# Unable to inspect table 'auth_permissions'
-# The error was: permission denied for table auth_permissions
-# Unable to inspect table 'auth_user'
-# The error was: permission denied for table auth_user
-# Unable to inspect table 'auth_user_groups'
-# The error was: permission denied for table auth_user_groups
-# Unable to inspect table 'auth_user_user_permissions'
-# The error was: permission denied for table auth_user_user_permissions
-# Unable to inspect table 'auth_users'
-# The error was: permission denied for table auth_users
 
 
 class Chats(models.Model):
+    id = models.IntegerField(primary_key=True)
     match_player_detail = models.ForeignKey('MatchesPlayersDetails', models.DO_NOTHING, blank=True, null=True)
     message = models.TextField(blank=True, null=True)
     time = models.IntegerField(blank=True, null=True)
     nick = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'chats'
 
 
@@ -66,29 +42,12 @@ class ClusterRegions(models.Model):
     name = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'cluster_regions'
-# Unable to inspect table 'django_admin_log'
-# The error was: permission denied for table django_admin_log
-# Unable to inspect table 'django_admin_logs'
-# The error was: permission denied for table django_admin_logs
-# Unable to inspect table 'django_content_type'
-# The error was: permission denied for table django_content_type
-# Unable to inspect table 'django_content_types'
-# The error was: permission denied for table django_content_types
-# Unable to inspect table 'django_migrations'
-# The error was: permission denied for table django_migrations
-# Unable to inspect table 'django_session'
-# The error was: permission denied for table django_session
-# Unable to inspect table 'django_sessions'
-# The error was: permission denied for table django_sessions
-# Unable to inspect table 'doctrine_migration_versions'
-# The error was: permission denied for table doctrine_migration_versions
-# Unable to inspect table 'flyway_schema_history'
-# The error was: permission denied for table flyway_schema_history
 
 
 class GameObjectives(models.Model):
+    id = models.IntegerField(primary_key=True)
     match_player_detail_id_1 = models.ForeignKey('MatchesPlayersDetails', models.DO_NOTHING, db_column='match_player_detail_id_1', blank=True, null=True)
     match_player_detail_id_2 = models.ForeignKey('MatchesPlayersDetails', models.DO_NOTHING, db_column='match_player_detail_id_2', blank=True, null=True)
     key = models.IntegerField(blank=True, null=True)
@@ -99,7 +58,7 @@ class GameObjectives(models.Model):
     slot = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'game_objectives'
 
 
@@ -109,7 +68,7 @@ class Heroes(models.Model):
     localized_name = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'heroes'
 
 
@@ -118,10 +77,8 @@ class Items(models.Model):
     name = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'items'
-# Unable to inspect table 'languages'
-# The error was: permission denied for table languages
 
 
 class Matches(models.Model):
@@ -140,11 +97,12 @@ class Matches(models.Model):
     positive_votes = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'matches'
 
 
 class MatchesPlayersDetails(models.Model):
+    id = models.IntegerField(primary_key=True)
     match = models.ForeignKey(Matches, models.DO_NOTHING, blank=True, null=True)
     player = models.ForeignKey('Players', models.DO_NOTHING, blank=True, null=True)
     hero = models.ForeignKey(Heroes, models.DO_NOTHING, blank=True, null=True)
@@ -186,24 +144,22 @@ class MatchesPlayersDetails(models.Model):
     gold_killing_couriers = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'matches_players_details'
-# Unable to inspect table 'migrations'
-# The error was: permission denied for table migrations
-# Unable to inspect table 'mobiles'
-# The error was: permission denied for table mobiles
 
 
 class Patches(models.Model):
+    id = models.IntegerField(primary_key=True)
     name = models.TextField()
     release_date = models.DateTimeField()
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'patches'
 
 
 class PlayerActions(models.Model):
+    id = models.IntegerField(primary_key=True)
     unit_order_none = models.IntegerField(blank=True, null=True)
     unit_order_move_to_position = models.IntegerField(blank=True, null=True)
     unit_order_move_to_target = models.IntegerField(blank=True, null=True)
@@ -235,11 +191,12 @@ class PlayerActions(models.Model):
     match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'player_actions'
 
 
 class PlayerRatings(models.Model):
+    id = models.IntegerField(primary_key=True)
     player = models.ForeignKey('Players', models.DO_NOTHING, blank=True, null=True)
     total_wins = models.IntegerField(blank=True, null=True)
     total_matches = models.IntegerField(blank=True, null=True)
@@ -247,11 +204,12 @@ class PlayerRatings(models.Model):
     trueskill_sigma = models.DecimalField(max_digits=65535, decimal_places=65535, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'player_ratings'
 
 
 class PlayerTimes(models.Model):
+    id = models.IntegerField(primary_key=True)
     match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True)
     time = models.IntegerField(blank=True, null=True)
     gold = models.IntegerField(blank=True, null=True)
@@ -259,7 +217,7 @@ class PlayerTimes(models.Model):
     xp = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'player_times'
 
 
@@ -269,23 +227,23 @@ class Players(models.Model):
     nick = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'players'
-# Unable to inspect table 'propel_migration'
-# The error was: permission denied for table propel_migration
 
 
 class PurchaseLogs(models.Model):
+    id = models.IntegerField(primary_key=True)
     match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True)
     item = models.ForeignKey(Items, models.DO_NOTHING, blank=True, null=True)
     time = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'purchase_logs'
 
 
 class Teamfights(models.Model):
+    id = models.IntegerField(primary_key=True)
     match = models.ForeignKey(Matches, models.DO_NOTHING, blank=True, null=True)
     start_teamfight = models.IntegerField(blank=True, null=True)
     end_teamfight = models.IntegerField(blank=True, null=True)
@@ -293,11 +251,12 @@ class Teamfights(models.Model):
     deaths = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'teamfights'
 
 
 class TeamfightsPlayers(models.Model):
+    id = models.IntegerField(primary_key=True)
     teamfight = models.ForeignKey(Teamfights, models.DO_NOTHING, blank=True, null=True)
     match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True)
     buyback = models.IntegerField(blank=True, null=True)
@@ -308,5 +267,5 @@ class TeamfightsPlayers(models.Model):
     xp_end = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False # Remove if you wish to allow Django to create, modify, and delete the table
         db_table = 'teamfights_players'
